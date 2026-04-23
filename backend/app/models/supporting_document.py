@@ -15,6 +15,7 @@ class SupportingDocument(db.Model, TimestampMixin):
     observation = db.Column(db.Text)
 
     appointments = db.relationship("Appointment", back_populates="supporting_document")
+    certifiable_events = db.relationship("CertifiableEvent", back_populates="supporting_document")
 
     __table_args__ = (
         db.CheckConstraint(

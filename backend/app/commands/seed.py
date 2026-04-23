@@ -25,6 +25,47 @@ def seed_roles():
     click.echo("Roles seeded successfully")
 
 
+@click.command("seed-certificate-types")
+@with_appcontext
+def seed_certificate_types():
+    from app.models.certificate_type import CertificateType
+
+    items = [
+        {
+            "code": "participation_general",
+            "name": "Participacion general",
+            "description": "General participation certificate",
+            "requires_event": False,
+        },
+        {
+            "code": "participation_event",
+            "name": "Participacion en evento",
+            "description": "Event participation certificate",
+            "requires_event": True,
+        },
+        {
+            "code": "recognition",
+            "name": "Reconocimiento",
+            "description": "Recognition certificate",
+            "requires_event": False,
+        },
+        {
+            "code": "no_debt",
+            "name": "No debt",
+            "description": "Reserved structure for no debt certificates",
+            "requires_event": False,
+        },
+    ]
+
+    for item in items:
+        existing = CertificateType.query.filter_by(code=item["code"]).first()
+        if not existing:
+            db.session.add(CertificateType(**item))
+
+    db.session.commit()
+    click.echo("Certificate types seeded successfully")
+
+
 @click.command("create-admin")
 @click.option("--username", prompt=True)
 @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)

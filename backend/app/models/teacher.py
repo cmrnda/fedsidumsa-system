@@ -23,6 +23,8 @@ class Teacher(db.Model, TimestampMixin):
 
     faculty = db.relationship("Faculty", back_populates="teachers")
     association = db.relationship("Association", back_populates="teachers")
+    certificates = db.relationship("Certificate")
+    event_participations = db.relationship("EventParticipation")
 
     __table_args__ = (
         db.UniqueConstraint("ci", "ci_extension", name="uq_teachers_ci_extension"),

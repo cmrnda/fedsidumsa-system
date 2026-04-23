@@ -19,6 +19,13 @@ def create_app():
     cors.init_app(app)
 
     from app.models.appointment import Appointment
+    from app.models.certificate import Certificate
+    from app.models.certificate_signer import CertificateSigner
+    from app.models.certificate_status_history import CertificateStatusHistory
+    from app.models.certificate_template import CertificateTemplate
+    from app.models.certificate_type import CertificateType
+    from app.models.certifiable_event import CertifiableEvent
+    from app.models.event_participation import EventParticipation
     from app.models.association import Association
     from app.models.faculty import Faculty
     from app.models.incompatibility_rule import IncompatibilityRule
