@@ -18,11 +18,18 @@ def create_app():
     bcrypt.init_app(app)
     cors.init_app(app)
 
-    from app.models.role import Role
-    from app.models.user import User
-    from app.models.faculty import Faculty
+    from app.models.appointment import Appointment
     from app.models.association import Association
+    from app.models.faculty import Faculty
+    from app.models.incompatibility_rule import IncompatibilityRule
+    from app.models.management_period import ManagementPeriod
+    from app.models.organizational_instance import OrganizationalInstance
+    from app.models.position import Position
+    from app.models.position_group import PositionGroup
+    from app.models.role import Role
+    from app.models.supporting_document import SupportingDocument
     from app.models.teacher import Teacher
+    from app.models.user import User
     from app.api import register_blueprints
 
     register_blueprints(app)
