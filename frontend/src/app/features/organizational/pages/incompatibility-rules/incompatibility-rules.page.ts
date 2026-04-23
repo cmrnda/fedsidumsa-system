@@ -6,6 +6,7 @@ import {
   IncompatibilityRule,
   PositionGroup,
 } from '../../../../shared/types/organization.types';
+import { formatApiError } from '../../../../shared/utils/ui-helpers';
 import { OrganizationalApi } from '../../data-access/organizational.api';
 
 @Component({
@@ -15,30 +16,30 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
   template: `
     <section class="space-y-6">
       <div>
-        <p class="text-sm font-medium text-slate-500">Organizational</p>
-        <h1 class="text-2xl font-bold text-slate-900">Incompatibility rules</h1>
+        <p class="text-sm font-medium text-slate-500">Organización</p>
+        <h1 class="text-2xl font-bold text-slate-900">Reglas de incompatibilidad</h1>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[380px,1fr]">
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 class="text-lg font-semibold text-slate-900">Create incompatibility rule</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Registrar regla de incompatibilidad</h2>
 
           <form [formGroup]="form" (ngSubmit)="submit()" class="mt-5 space-y-4">
             <select formControlName="origin_group_id" class="w-full rounded-xl border border-slate-300 px-4 py-3">
-              <option [ngValue]="null">Select origin group</option>
+              <option [ngValue]="null">Seleccione el grupo origen</option>
               <option *ngFor="let item of groups()" [ngValue]="item.id">{{ item.name }}</option>
             </select>
 
             <select formControlName="target_group_id" class="w-full rounded-xl border border-slate-300 px-4 py-3">
-              <option [ngValue]="null">Select target group</option>
+              <option [ngValue]="null">Seleccione el grupo destino</option>
               <option *ngFor="let item of groups()" [ngValue]="item.id">{{ item.name }}</option>
             </select>
 
-            <textarea formControlName="reason" rows="4" placeholder="Reason" class="w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
+            <textarea formControlName="reason" rows="4" placeholder="Motivo" class="w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
 
             <label class="flex items-center gap-3 text-sm text-slate-700">
               <input formControlName="is_active" type="checkbox" />
-              Active
+              Activa
             </label>
 
             @if (error()) {
@@ -50,24 +51,24 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
             }
 
             <button type="submit" [disabled]="form.invalid || loading()" class="w-full rounded-xl bg-slate-900 px-4 py-3 font-medium text-white">
-              {{ loading() ? 'Saving...' : 'Create rule' }}
+              {{ loading() ? 'Guardando...' : 'Registrar regla' }}
             </button>
           </form>
         </div>
 
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Rules list</h2>
-            <button type="button" (click)="loadAll()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Refresh</button>
+            <h2 class="text-lg font-semibold text-slate-900">Lista de reglas</h2>
+            <button type="button" (click)="loadAll()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Actualizar</button>
           </div>
 
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
               <thead>
                 <tr class="text-left text-slate-500">
-                  <th class="px-4 py-3">Origin group</th>
-                  <th class="px-4 py-3">Target group</th>
-                  <th class="px-4 py-3">Reason</th>
+                  <th class="px-4 py-3">Grupo origen</th>
+                  <th class="px-4 py-3">Grupo destino</th>
+                  <th class="px-4 py-3">Motivo</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -80,7 +81,7 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
             </table>
 
             @if (!rules().length) {
-              <div class="py-6 text-center text-sm text-slate-500">No rules found</div>
+              <div class="py-6 text-center text-sm text-slate-500">No hay reglas registradas</div>
             }
           </div>
         </div>
@@ -141,7 +142,7 @@ export class IncompatibilityRulesPage implements OnInit {
       is_active: !!raw.is_active,
     }).subscribe({
       next: () => {
-        this.success.set('Rule created successfully');
+        this.success.set('Regla registrada correctamente.');
         this.form.reset({
           origin_group_id: null,
           target_group_id: null,
@@ -152,7 +153,7 @@ export class IncompatibilityRulesPage implements OnInit {
         this.loading.set(false);
       },
       error: (errorResponse) => {
-        this.error.set(errorResponse?.error?.message || 'Request failed');
+        this.error.set(formatApiError(errorResponse, 'No se pudo registrar la regla.'));
         this.loading.set(false);
       },
     });

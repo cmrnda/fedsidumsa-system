@@ -3,6 +3,12 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { SupportingDocument } from '../../../../shared/types/organization.types';
+import {
+  documentTypeOptions,
+  formatApiError,
+  formatDate,
+  formatDocumentType,
+} from '../../../../shared/utils/ui-helpers';
 import { OrganizationalApi } from '../../data-access/organizational.api';
 
 @Component({
@@ -12,28 +18,24 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
   template: `
     <section class="space-y-6">
       <div>
-        <p class="text-sm font-medium text-slate-500">Organizational</p>
-        <h1 class="text-2xl font-bold text-slate-900">Supporting documents</h1>
+        <p class="text-sm font-medium text-slate-500">Organización</p>
+        <h1 class="text-2xl font-bold text-slate-900">Documentos de respaldo</h1>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[380px,1fr]">
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 class="text-lg font-semibold text-slate-900">Create document</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Registrar documento</h2>
 
           <form [formGroup]="form" (ngSubmit)="submit()" class="mt-5 space-y-4">
             <select formControlName="document_type" class="w-full rounded-xl border border-slate-300 px-4 py-3">
-              <option value="resolution">resolution</option>
-              <option value="minutes">minutes</option>
-              <option value="note">note</option>
-              <option value="memorandum">memorandum</option>
-              <option value="call">call</option>
-              <option value="certificate">certificate</option>
-              <option value="other">other</option>
+              @for (option of documentTypeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
             </select>
 
-            <input formControlName="document_number" type="text" placeholder="Document number" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <input formControlName="document_number" type="text" placeholder="Número del documento" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
             <input formControlName="document_date" type="date" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
-            <textarea formControlName="description" rows="4" placeholder="Description" class="w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
+            <textarea formControlName="description" rows="4" placeholder="Descripción" class="w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
 
             @if (error()) {
               <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</div>
@@ -44,15 +46,15 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
             }
 
             <button type="submit" [disabled]="form.invalid || loading()" class="w-full rounded-xl bg-slate-900 px-4 py-3 font-medium text-white">
-              {{ loading() ? 'Saving...' : 'Create document' }}
+              {{ loading() ? 'Guardando...' : 'Registrar documento' }}
             </button>
           </form>
         </div>
 
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Documents list</h2>
-            <button type="button" (click)="loadDocuments()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Refresh</button>
+            <h2 class="text-lg font-semibold text-slate-900">Lista de documentos</h2>
+            <button type="button" (click)="loadDocuments()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Actualizar</button>
           </div>
 
           <div class="overflow-x-auto">
@@ -67,16 +69,16 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr *ngFor="let item of documents()">
-                  <td class="px-4 py-3">{{ item.document_type }}</td>
+                  <td class="px-4 py-3">{{ formatType(item.document_type) }}</td>
                   <td class="px-4 py-3">{{ item.document_number || '—' }}</td>
-                  <td class="px-4 py-3">{{ item.document_date || '—' }}</td>
+                  <td class="px-4 py-3">{{ item.document_date ? formatDateLabel(item.document_date) : '—' }}</td>
                   <td class="px-4 py-3">{{ item.description || '—' }}</td>
                 </tr>
               </tbody>
             </table>
 
             @if (!documents().length) {
-              <div class="py-6 text-center text-sm text-slate-500">No documents found</div>
+              <div class="py-6 text-center text-sm text-slate-500">No hay documentos registrados</div>
             }
           </div>
         </div>
@@ -92,6 +94,7 @@ export class DocumentsPage implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly success = signal('');
+  protected readonly documentTypeOptions = documentTypeOptions;
 
   protected readonly form = this.fb.nonNullable.group({
     document_type: ['resolution', [Validators.required]],
@@ -128,7 +131,7 @@ export class DocumentsPage implements OnInit {
       description: raw.description || null,
     }).subscribe({
       next: () => {
-        this.success.set('Document created successfully');
+        this.success.set('Documento registrado correctamente.');
         this.form.reset({
           document_type: 'resolution',
           document_number: '',
@@ -139,9 +142,17 @@ export class DocumentsPage implements OnInit {
         this.loading.set(false);
       },
       error: (errorResponse) => {
-        this.error.set(errorResponse?.error?.message || 'Request failed');
+        this.error.set(formatApiError(errorResponse, 'No se pudo registrar el documento.'));
         this.loading.set(false);
       },
     });
+  }
+
+  protected formatType(value: string): string {
+    return formatDocumentType(value);
+  }
+
+  protected formatDateLabel(value: string): string {
+    return formatDate(value);
   }
 }

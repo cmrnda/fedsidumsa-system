@@ -3,6 +3,12 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ManagementPeriod } from '../../../../shared/types/organization.types';
+import {
+  formatApiError,
+  formatDate,
+  formatPeriodStatus,
+  periodStatusOptions,
+} from '../../../../shared/utils/ui-helpers';
 import { OrganizationalApi } from '../../data-access/organizational.api';
 
 @Component({
@@ -12,26 +18,26 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
   template: `
     <section class="space-y-6">
       <div>
-        <p class="text-sm font-medium text-slate-500">Organizational</p>
-        <h1 class="text-2xl font-bold text-slate-900">Management periods</h1>
+        <p class="text-sm font-medium text-slate-500">Organización</p>
+        <h1 class="text-2xl font-bold text-slate-900">Periodos de gestión</h1>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[380px,1fr]">
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 class="text-lg font-semibold text-slate-900">Create period</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Registrar periodo</h2>
 
           <form [formGroup]="form" (ngSubmit)="submit()" class="mt-5 space-y-4">
-            <input formControlName="name" type="text" placeholder="Name" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <input formControlName="name" type="text" placeholder="Nombre del periodo" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
             <input formControlName="start_date" type="date" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
             <input formControlName="end_date" type="date" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
 
             <select formControlName="status" class="w-full rounded-xl border border-slate-300 px-4 py-3">
-              <option value="active">active</option>
-              <option value="closed">closed</option>
-              <option value="cancelled">cancelled</option>
+              @for (option of periodStatusOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
             </select>
 
-            <textarea formControlName="observation" rows="4" placeholder="Observation" class="w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
+            <textarea formControlName="observation" rows="4" placeholder="Observación" class="w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
 
             @if (error()) {
               <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</div>
@@ -42,15 +48,15 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
             }
 
             <button type="submit" [disabled]="form.invalid || loading()" class="w-full rounded-xl bg-slate-900 px-4 py-3 font-medium text-white">
-              {{ loading() ? 'Saving...' : 'Create period' }}
+              {{ loading() ? 'Guardando...' : 'Registrar periodo' }}
             </button>
           </form>
         </div>
 
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Periods list</h2>
-            <button type="button" (click)="loadPeriods()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Refresh</button>
+            <h2 class="text-lg font-semibold text-slate-900">Lista de periodos</h2>
+            <button type="button" (click)="loadPeriods()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Actualizar</button>
           </div>
 
           <div class="overflow-x-auto">
@@ -66,15 +72,15 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
               <tbody class="divide-y divide-slate-100">
                 <tr *ngFor="let item of periods()">
                   <td class="px-4 py-3">{{ item.name }}</td>
-                  <td class="px-4 py-3">{{ item.start_date }}</td>
-                  <td class="px-4 py-3">{{ item.end_date }}</td>
-                  <td class="px-4 py-3">{{ item.status }}</td>
+                  <td class="px-4 py-3">{{ formatDateLabel(item.start_date) }}</td>
+                  <td class="px-4 py-3">{{ formatDateLabel(item.end_date) }}</td>
+                  <td class="px-4 py-3">{{ formatStatus(item.status) }}</td>
                 </tr>
               </tbody>
             </table>
 
             @if (!periods().length) {
-              <div class="py-6 text-center text-sm text-slate-500">No periods found</div>
+              <div class="py-6 text-center text-sm text-slate-500">No hay periodos registrados</div>
             }
           </div>
         </div>
@@ -90,6 +96,7 @@ export class PeriodsPage implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly success = signal('');
+  protected readonly periodStatusOptions = periodStatusOptions;
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
@@ -120,7 +127,7 @@ export class PeriodsPage implements OnInit {
 
     this.organizationalApi.createPeriod(this.form.getRawValue()).subscribe({
       next: () => {
-        this.success.set('Period created successfully');
+        this.success.set('Periodo registrado correctamente.');
         this.form.reset({
           name: '',
           start_date: '',
@@ -132,9 +139,17 @@ export class PeriodsPage implements OnInit {
         this.loading.set(false);
       },
       error: (errorResponse) => {
-        this.error.set(errorResponse?.error?.message || 'Request failed');
+        this.error.set(formatApiError(errorResponse, 'No se pudo registrar el periodo.'));
         this.loading.set(false);
       },
     });
+  }
+
+  protected formatDateLabel(value: string): string {
+    return formatDate(value);
+  }
+
+  protected formatStatus(value: string): string {
+    return formatPeriodStatus(value);
   }
 }

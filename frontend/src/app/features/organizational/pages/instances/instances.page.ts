@@ -3,6 +3,13 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { OrganizationalInstance } from '../../../../shared/types/organization.types';
+import {
+  formatApiError,
+  formatInstanceLevel,
+  formatInstanceType,
+  instanceLevelOptions,
+  instanceTypeOptions,
+} from '../../../../shared/utils/ui-helpers';
 import { OrganizationalApi } from '../../data-access/organizational.api';
 
 @Component({
@@ -12,38 +19,33 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
   template: `
     <section class="space-y-6">
       <div>
-        <p class="text-sm font-medium text-slate-500">Organizational</p>
-        <h1 class="text-2xl font-bold text-slate-900">Organizational instances</h1>
+        <p class="text-sm font-medium text-slate-500">Organización</p>
+        <h1 class="text-2xl font-bold text-slate-900">Instancias organizacionales</h1>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[380px,1fr]">
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 class="text-lg font-semibold text-slate-900">Create instance</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Registrar instancia</h2>
 
           <form [formGroup]="form" (ngSubmit)="submit()" class="mt-5 space-y-4">
-            <input formControlName="code" type="text" placeholder="Code" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
-            <input formControlName="name" type="text" placeholder="Name" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <input formControlName="code" type="text" placeholder="Código" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <input formControlName="name" type="text" placeholder="Nombre de la instancia" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
 
             <select formControlName="level" class="w-full rounded-xl border border-slate-300 px-4 py-3">
-              <option value="university">university</option>
-              <option value="faculty">faculty</option>
-              <option value="career">career</option>
-              <option value="federation">federation</option>
-              <option value="association">association</option>
-              <option value="other">other</option>
+              @for (option of instanceLevelOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
             </select>
 
             <select formControlName="instance_type" class="w-full rounded-xl border border-slate-300 px-4 py-3">
-              <option value="teacher_representation">teacher_representation</option>
-              <option value="academic_authority">academic_authority</option>
-              <option value="union_organization">union_organization</option>
-              <option value="committee">committee</option>
-              <option value="other">other</option>
+              @for (option of instanceTypeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
             </select>
 
             <label class="flex items-center gap-3 text-sm text-slate-700">
               <input formControlName="is_active" type="checkbox" />
-              Active
+              Activa
             </label>
 
             @if (error()) {
@@ -55,15 +57,15 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
             }
 
             <button type="submit" [disabled]="form.invalid || loading()" class="w-full rounded-xl bg-slate-900 px-4 py-3 font-medium text-white">
-              {{ loading() ? 'Saving...' : 'Create instance' }}
+              {{ loading() ? 'Guardando...' : 'Registrar instancia' }}
             </button>
           </form>
         </div>
 
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Instances list</h2>
-            <button type="button" (click)="loadInstances()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Refresh</button>
+            <h2 class="text-lg font-semibold text-slate-900">Lista de instancias</h2>
+            <button type="button" (click)="loadInstances()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Actualizar</button>
           </div>
 
           <div class="overflow-x-auto">
@@ -80,14 +82,14 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
                 <tr *ngFor="let item of instances()">
                   <td class="px-4 py-3">{{ item.code }}</td>
                   <td class="px-4 py-3">{{ item.name }}</td>
-                  <td class="px-4 py-3">{{ item.level }}</td>
-                  <td class="px-4 py-3">{{ item.instance_type }}</td>
+                  <td class="px-4 py-3">{{ formatLevel(item.level) }}</td>
+                  <td class="px-4 py-3">{{ formatType(item.instance_type) }}</td>
                 </tr>
               </tbody>
             </table>
 
             @if (!instances().length) {
-              <div class="py-6 text-center text-sm text-slate-500">No instances found</div>
+              <div class="py-6 text-center text-sm text-slate-500">No hay instancias registradas</div>
             }
           </div>
         </div>
@@ -103,6 +105,8 @@ export class InstancesPage implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly success = signal('');
+  protected readonly instanceLevelOptions = instanceLevelOptions;
+  protected readonly instanceTypeOptions = instanceTypeOptions;
 
   protected readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required]],
@@ -133,7 +137,7 @@ export class InstancesPage implements OnInit {
 
     this.organizationalApi.createInstance(this.form.getRawValue()).subscribe({
       next: () => {
-        this.success.set('Instance created successfully');
+        this.success.set('Instancia registrada correctamente.');
         this.form.reset({
           code: '',
           name: '',
@@ -145,9 +149,17 @@ export class InstancesPage implements OnInit {
         this.loading.set(false);
       },
       error: (errorResponse) => {
-        this.error.set(errorResponse?.error?.message || 'Request failed');
+        this.error.set(formatApiError(errorResponse, 'No se pudo registrar la instancia.'));
         this.loading.set(false);
       },
     });
+  }
+
+  protected formatLevel(value: string): string {
+    return formatInstanceLevel(value);
+  }
+
+  protected formatType(value: string): string {
+    return formatInstanceType(value);
   }
 }

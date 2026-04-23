@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { PositionGroup } from '../../../../shared/types/organization.types';
+import { formatApiError } from '../../../../shared/utils/ui-helpers';
 import { OrganizationalApi } from '../../data-access/organizational.api';
 
 @Component({
@@ -12,21 +13,21 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
   template: `
     <section class="space-y-6">
       <div>
-        <p class="text-sm font-medium text-slate-500">Organizational</p>
-        <h1 class="text-2xl font-bold text-slate-900">Position groups</h1>
+        <p class="text-sm font-medium text-slate-500">Organización</p>
+        <h1 class="text-2xl font-bold text-slate-900">Grupos de cargo</h1>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[380px,1fr]">
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 class="text-lg font-semibold text-slate-900">Create position group</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Registrar grupo de cargo</h2>
 
           <form [formGroup]="form" (ngSubmit)="submit()" class="mt-5 space-y-4">
-            <input formControlName="name" type="text" placeholder="Name" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
-            <textarea formControlName="description" rows="4" placeholder="Description" class="w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
+            <input formControlName="name" type="text" placeholder="Nombre del grupo" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <textarea formControlName="description" rows="4" placeholder="Descripción" class="w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
 
             <label class="flex items-center gap-3 text-sm text-slate-700">
               <input formControlName="is_active" type="checkbox" />
-              Active
+              Activo
             </label>
 
             @if (error()) {
@@ -38,15 +39,15 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
             }
 
             <button type="submit" [disabled]="form.invalid || loading()" class="w-full rounded-xl bg-slate-900 px-4 py-3 font-medium text-white">
-              {{ loading() ? 'Saving...' : 'Create position group' }}
+              {{ loading() ? 'Guardando...' : 'Registrar grupo' }}
             </button>
           </form>
         </div>
 
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Position groups list</h2>
-            <button type="button" (click)="loadGroups()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Refresh</button>
+            <h2 class="text-lg font-semibold text-slate-900">Lista de grupos</h2>
+            <button type="button" (click)="loadGroups()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Actualizar</button>
           </div>
 
           <div class="overflow-x-auto">
@@ -66,7 +67,7 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
             </table>
 
             @if (!groups().length) {
-              <div class="py-6 text-center text-sm text-slate-500">No position groups found</div>
+              <div class="py-6 text-center text-sm text-slate-500">No hay grupos registrados</div>
             }
           </div>
         </div>
@@ -110,7 +111,7 @@ export class PositionGroupsPage implements OnInit {
 
     this.organizationalApi.createPositionGroup(this.form.getRawValue()).subscribe({
       next: () => {
-        this.success.set('Position group created successfully');
+        this.success.set('Grupo de cargo registrado correctamente.');
         this.form.reset({
           name: '',
           description: '',
@@ -120,7 +121,7 @@ export class PositionGroupsPage implements OnInit {
         this.loading.set(false);
       },
       error: (errorResponse) => {
-        this.error.set(errorResponse?.error?.message || 'Request failed');
+        this.error.set(formatApiError(errorResponse, 'No se pudo registrar el grupo de cargo.'));
         this.loading.set(false);
       },
     });

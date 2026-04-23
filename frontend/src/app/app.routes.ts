@@ -31,6 +31,27 @@ export const appRoutes: Routes = [
           ),
       },
       {
+        path: 'certificates',
+        loadComponent: () =>
+          import('./features/certificates/pages/certificates/certificates.page').then(
+            (m) => m.CertificatesPage,
+          ),
+      },
+      {
+        path: 'certificates/setup',
+        loadComponent: () =>
+          import('./features/certificates/pages/certificates-setup/certificates-setup.page').then(
+            (m) => m.CertificatesSetupPage,
+          ),
+      },
+      {
+        path: 'certificates/:id',
+        loadComponent: () =>
+          import('./features/certificates/pages/certificate-detail/certificate-detail.page').then(
+            (m) => m.CertificateDetailPage,
+          ),
+      },
+      {
         path: 'organizational/periods',
         loadComponent: () =>
           import('./features/organizational/pages/periods/periods.page').then(

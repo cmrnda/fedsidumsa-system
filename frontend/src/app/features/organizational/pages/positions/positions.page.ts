@@ -7,6 +7,7 @@ import {
   Position,
   PositionGroup,
 } from '../../../../shared/types/organization.types';
+import { formatApiError } from '../../../../shared/utils/ui-helpers';
 import { OrganizationalApi } from '../../data-access/organizational.api';
 
 @Component({
@@ -16,35 +17,35 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
   template: `
     <section class="space-y-6">
       <div>
-        <p class="text-sm font-medium text-slate-500">Organizational</p>
-        <h1 class="text-2xl font-bold text-slate-900">Positions</h1>
+        <p class="text-sm font-medium text-slate-500">Organización</p>
+        <h1 class="text-2xl font-bold text-slate-900">Cargos</h1>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[380px,1fr]">
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 class="text-lg font-semibold text-slate-900">Create position</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Registrar cargo</h2>
 
           <form [formGroup]="form" (ngSubmit)="submit()" class="mt-5 space-y-4">
             <select formControlName="instance_id" class="w-full rounded-xl border border-slate-300 px-4 py-3">
-              <option [ngValue]="null">Select instance</option>
+              <option [ngValue]="null">Seleccione una instancia</option>
               <option *ngFor="let item of instances()" [ngValue]="item.id">{{ item.code }} - {{ item.name }}</option>
             </select>
 
             <select formControlName="position_group_id" class="w-full rounded-xl border border-slate-300 px-4 py-3">
-              <option [ngValue]="null">Select position group</option>
+              <option [ngValue]="null">Seleccione un grupo de cargo</option>
               <option *ngFor="let item of groups()" [ngValue]="item.id">{{ item.name }}</option>
             </select>
 
-            <input formControlName="name" type="text" placeholder="Position name" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <input formControlName="name" type="text" placeholder="Nombre del cargo" class="w-full rounded-xl border border-slate-300 px-4 py-3" />
 
             <label class="flex items-center gap-3 text-sm text-slate-700">
               <input formControlName="is_exclusive" type="checkbox" />
-              Exclusive
+              Exclusivo
             </label>
 
             <label class="flex items-center gap-3 text-sm text-slate-700">
               <input formControlName="is_active" type="checkbox" />
-              Active
+              Activo
             </label>
 
             @if (error()) {
@@ -56,25 +57,25 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
             }
 
             <button type="submit" [disabled]="form.invalid || loading()" class="w-full rounded-xl bg-slate-900 px-4 py-3 font-medium text-white">
-              {{ loading() ? 'Saving...' : 'Create position' }}
+              {{ loading() ? 'Guardando...' : 'Registrar cargo' }}
             </button>
           </form>
         </div>
 
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-slate-900">Positions list</h2>
-            <button type="button" (click)="loadAll()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Refresh</button>
+            <h2 class="text-lg font-semibold text-slate-900">Lista de cargos</h2>
+            <button type="button" (click)="loadAll()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm">Actualizar</button>
           </div>
 
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
               <thead>
                 <tr class="text-left text-slate-500">
-                  <th class="px-4 py-3">Name</th>
-                  <th class="px-4 py-3">Instance</th>
-                  <th class="px-4 py-3">Group</th>
-                  <th class="px-4 py-3">Exclusive</th>
+                  <th class="px-4 py-3">Cargo</th>
+                  <th class="px-4 py-3">Instancia</th>
+                  <th class="px-4 py-3">Grupo</th>
+                  <th class="px-4 py-3">Exclusivo</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -82,13 +83,13 @@ import { OrganizationalApi } from '../../data-access/organizational.api';
                   <td class="px-4 py-3">{{ item.name }}</td>
                   <td class="px-4 py-3">{{ instanceLabel(item.instance_id) }}</td>
                   <td class="px-4 py-3">{{ groupLabel(item.position_group_id) }}</td>
-                  <td class="px-4 py-3">{{ item.is_exclusive ? 'Yes' : 'No' }}</td>
+                  <td class="px-4 py-3">{{ item.is_exclusive ? 'Sí' : 'No' }}</td>
                 </tr>
               </tbody>
             </table>
 
             @if (!positions().length) {
-              <div class="py-6 text-center text-sm text-slate-500">No positions found</div>
+              <div class="py-6 text-center text-sm text-slate-500">No hay cargos registrados</div>
             }
           </div>
         </div>
@@ -160,7 +161,7 @@ export class PositionsPage implements OnInit {
       is_active: !!raw.is_active,
     }).subscribe({
       next: () => {
-        this.success.set('Position created successfully');
+        this.success.set('Cargo registrado correctamente.');
         this.form.reset({
           instance_id: null,
           position_group_id: null,
@@ -172,7 +173,7 @@ export class PositionsPage implements OnInit {
         this.loading.set(false);
       },
       error: (errorResponse) => {
-        this.error.set(errorResponse?.error?.message || 'Request failed');
+        this.error.set(formatApiError(errorResponse, 'No se pudo registrar el cargo.'));
         this.loading.set(false);
       },
     });
