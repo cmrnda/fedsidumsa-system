@@ -16,7 +16,7 @@ class Appointment(db.Model, TimestampMixin):
     supporting_document_id = db.Column(db.BigInteger, db.ForeignKey("supporting_documents.id"))
     observation = db.Column(db.Text)
 
-    teacher = db.relationship("Teacher")
+    teacher = db.relationship("Teacher", back_populates="appointments")
     period = db.relationship("ManagementPeriod", back_populates="appointments")
     position = db.relationship("Position", back_populates="appointments")
     supporting_document = db.relationship("SupportingDocument", back_populates="appointments")

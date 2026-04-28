@@ -145,6 +145,12 @@ class OrganizationalService:
             if not document:
                 raise ApiError("Supporting document not found", 404)
 
+        self._validate_appointment_period_range(
+            period=period,
+            start_date=data["start_date"],
+            end_date=data.get("end_date"),
+        )
+
         overlaps = self.appointment_repository.get_overlapping_active(
             teacher_id=data["teacher_id"],
             start_date=data["start_date"],
@@ -188,6 +194,12 @@ class OrganizationalService:
 
         start_date = data.get("start_date", appointment.start_date)
         end_date = data.get("end_date", appointment.end_date)
+
+        self._validate_appointment_period_range(
+            period=period,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         overlaps = self.appointment_repository.get_overlapping_active(
             teacher_id=appointment.teacher_id,
@@ -237,3 +249,10 @@ class OrganizationalService:
         ).first()
 
         return rule is not None
+
+    def _validate_appointment_period_range(self, period, start_date, end_date):
+        if start_date < period.start_date or start_date > period.end_date:
+            raise ApiError("Appointment start date must be within the selected management period", 400)
+
+        if end_date and (end_date < period.start_date or end_date > period.end_date):
+            raise ApiError("Appointment end date must be within the selected management period", 400)

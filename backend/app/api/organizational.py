@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
+from app.pagination import paginate_collection
 from app.schemas.organization import (
     AppointmentCreateSchema,
     AppointmentResponseSchema,
@@ -59,7 +60,12 @@ appointments_response_schema = AppointmentResponseSchema(many=True)
 @jwt_required()
 def list_management_periods():
     periods = organizational_service.list_management_periods()
-    return jsonify({"data": management_periods_response_schema.dump(periods)}), 200
+    result = paginate_collection(
+        periods,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": management_periods_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @organizational_bp.post("/periods")
@@ -74,7 +80,12 @@ def create_management_period():
 @jwt_required()
 def list_organizational_instances():
     instances = organizational_service.list_organizational_instances()
-    return jsonify({"data": organizational_instances_response_schema.dump(instances)}), 200
+    result = paginate_collection(
+        instances,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": organizational_instances_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @organizational_bp.post("/instances")
@@ -89,7 +100,12 @@ def create_organizational_instance():
 @jwt_required()
 def list_position_groups():
     groups = organizational_service.list_position_groups()
-    return jsonify({"data": position_groups_response_schema.dump(groups)}), 200
+    result = paginate_collection(
+        groups,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": position_groups_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @organizational_bp.post("/position-groups")
@@ -104,7 +120,12 @@ def create_position_group():
 @jwt_required()
 def list_positions():
     positions = organizational_service.list_positions()
-    return jsonify({"data": positions_response_schema.dump(positions)}), 200
+    result = paginate_collection(
+        positions,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": positions_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @organizational_bp.post("/positions")
@@ -119,7 +140,12 @@ def create_position():
 @jwt_required()
 def list_supporting_documents():
     documents = organizational_service.list_supporting_documents()
-    return jsonify({"data": supporting_documents_response_schema.dump(documents)}), 200
+    result = paginate_collection(
+        documents,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": supporting_documents_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @organizational_bp.post("/documents")
@@ -134,7 +160,12 @@ def create_supporting_document():
 @jwt_required()
 def list_incompatibility_rules():
     rules = organizational_service.list_incompatibility_rules()
-    return jsonify({"data": incompatibility_rules_response_schema.dump(rules)}), 200
+    result = paginate_collection(
+        rules,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": incompatibility_rules_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @organizational_bp.post("/incompatibility-rules")
@@ -154,7 +185,12 @@ def list_appointments():
         "status": request.args.get("status", type=str),
     }
     appointments = organizational_service.list_appointments(filters)
-    return jsonify({"data": appointments_response_schema.dump(appointments)}), 200
+    result = paginate_collection(
+        appointments,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": appointments_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @organizational_bp.get("/appointments/<int:appointment_id>")

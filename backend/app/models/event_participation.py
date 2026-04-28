@@ -13,7 +13,7 @@ class EventParticipation(db.Model, TimestampMixin):
     status = db.Column(db.String(20), nullable=False, default="registered")
     observation = db.Column(db.Text)
 
-    teacher = db.relationship("Teacher")
+    teacher = db.relationship("Teacher", back_populates="event_participations")
     event = db.relationship("CertifiableEvent", back_populates="participations")
     certificates = db.relationship("Certificate", back_populates="participation")
 

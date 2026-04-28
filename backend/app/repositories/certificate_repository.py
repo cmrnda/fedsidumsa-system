@@ -3,6 +3,10 @@ from sqlalchemy.orm import joinedload
 
 from app.models.appointment import Appointment
 from app.models.certificate import Certificate
+from app.models.certificate_signer import CertificateSigner
+from app.models.certificate_status_history import CertificateStatusHistory
+from app.models.event_participation import EventParticipation
+from app.models.position import Position
 from app.models.teacher import Teacher
 
 
@@ -14,8 +18,11 @@ class CertificateRepository:
             joinedload(Certificate.template),
             joinedload(Certificate.event),
             joinedload(Certificate.participation),
-            joinedload(Certificate.signers).joinedload(Appointment.teacher),
-            joinedload(Certificate.signers).joinedload(Appointment.position).joinedload("instance"),
+            joinedload(Certificate.signers).joinedload(CertificateSigner.appointment).joinedload(Appointment.teacher),
+            joinedload(Certificate.signers)
+            .joinedload(CertificateSigner.appointment)
+            .joinedload(Appointment.position)
+            .joinedload(Position.instance),
         )
 
         if filters:
@@ -50,16 +57,19 @@ class CertificateRepository:
             joinedload(Certificate.certificate_type),
             joinedload(Certificate.template),
             joinedload(Certificate.event),
-            joinedload(Certificate.participation).joinedload("event"),
-            joinedload(Certificate.history).joinedload("changed_by_user"),
-            joinedload(Certificate.signers).joinedload(Appointment.teacher),
-            joinedload(Certificate.signers).joinedload(Appointment.position).joinedload("instance"),
+            joinedload(Certificate.participation).joinedload(EventParticipation.event),
+            joinedload(Certificate.history).joinedload(CertificateStatusHistory.changed_by_user),
+            joinedload(Certificate.signers).joinedload(CertificateSigner.appointment).joinedload(Appointment.teacher),
+            joinedload(Certificate.signers)
+            .joinedload(CertificateSigner.appointment)
+            .joinedload(Appointment.position)
+            .joinedload(Position.instance),
         ).filter(Certificate.id == certificate_id).first()
 
     def get_available_signers(self, effective_date=None):
         query = Appointment.query.options(
             joinedload(Appointment.teacher),
-            joinedload(Appointment.position).joinedload("instance"),
+            joinedload(Appointment.position).joinedload(Position.instance),
             joinedload(Appointment.period),
         ).filter(
             Appointment.status == "active",

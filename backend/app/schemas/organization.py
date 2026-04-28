@@ -1,3 +1,5 @@
+from datetime import date
+
 from marshmallow import Schema, fields, validate
 
 
@@ -169,3 +171,61 @@ class AppointmentResponseSchema(Schema):
     observation = fields.String()
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
+    teacher_name = fields.Method("get_teacher_name")
+    period_name = fields.Method("get_period_name")
+    position_name = fields.Method("get_position_name")
+    instance_name = fields.Method("get_instance_name")
+    position_group_name = fields.Method("get_position_group_name")
+    supporting_document_label = fields.Method("get_supporting_document_label")
+    validity_state = fields.Method("get_validity_state")
+    can_act_as_signer = fields.Method("get_can_act_as_signer")
+
+    def get_teacher_name(self, obj):
+        if not obj.teacher:
+            return None
+        return f"{obj.teacher.first_names} {obj.teacher.last_names}".strip()
+
+    def get_period_name(self, obj):
+        return obj.period.name if obj.period else None
+
+    def get_position_name(self, obj):
+        return obj.position.name if obj.position else None
+
+    def get_instance_name(self, obj):
+        if not obj.position or not obj.position.instance:
+            return None
+        return obj.position.instance.name
+
+    def get_position_group_name(self, obj):
+        if not obj.position or not obj.position.position_group:
+            return None
+        return obj.position.position_group.name
+
+    def get_supporting_document_label(self, obj):
+        if not obj.supporting_document:
+            return None
+        number = obj.supporting_document.document_number
+        kind = {
+            "resolution": "Resolución",
+            "minutes": "Acta",
+            "note": "Nota",
+            "memorandum": "Memorándum",
+            "call": "Convocatoria",
+            "certificate": "Certificado",
+            "other": "Otro",
+        }.get(obj.supporting_document.document_type, obj.supporting_document.document_type)
+        return f"{kind} {number}".strip() if number else kind
+
+    def get_validity_state(self, obj):
+        today = date.today()
+
+        if obj.status != "active":
+            return obj.status
+        if obj.start_date and obj.start_date > today:
+            return "scheduled"
+        if obj.end_date and obj.end_date < today:
+            return "expired"
+        return "current"
+
+    def get_can_act_as_signer(self, obj):
+        return bool(obj.is_signer and self.get_validity_state(obj) == "current")

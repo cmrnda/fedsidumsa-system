@@ -26,6 +26,7 @@ def create_app():
     from app.models.certificate_type import CertificateType
     from app.models.certifiable_event import CertifiableEvent
     from app.models.event_participation import EventParticipation
+    from app.models.obligation_concept import ObligationConcept
     from app.models.association import Association
     from app.models.faculty import Faculty
     from app.models.incompatibility_rule import IncompatibilityRule
@@ -36,6 +37,8 @@ def create_app():
     from app.models.role import Role
     from app.models.supporting_document import SupportingDocument
     from app.models.teacher import Teacher
+    from app.models.teacher_obligation import TeacherObligation
+    from app.models.teacher_payment import TeacherPayment
     from app.models.user import User
     from app.api import register_blueprints
 

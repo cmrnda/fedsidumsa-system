@@ -2,10 +2,14 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
 from app.errors import ApiError
+from app.pagination import paginate_collection
 from app.schemas.certificate import (
     AvailableSignerResponseSchema,
     CertificateCreateSchema,
     CertificateHistoryResponseSchema,
+    PublicCertificateLookupSchema,
+    PublicCertificateRequestSchema,
+    PublicCertificateStatusResponseSchema,
     CertificateResponseSchema,
     CertificateStatusActionSchema,
     CertificateTemplateCreateSchema,
@@ -17,11 +21,14 @@ from app.schemas.certificate import (
     CertifiableEventResponseSchema,
     EventParticipationCreateSchema,
     EventParticipationResponseSchema,
+    PublicCertificateTypeResponseSchema,
+    PublicCertificateValidationResponseSchema,
 )
 from app.security.decorators import roles_required
 from app.services.certificate_service import CertificateService
 
 certificates_bp = Blueprint("certificates", __name__)
+public_certificates_bp = Blueprint("public_certificates", __name__)
 
 certificate_service = CertificateService()
 
@@ -48,6 +55,11 @@ certificate_response_schema = CertificateResponseSchema()
 certificates_response_schema = CertificateResponseSchema(many=True)
 available_signers_response_schema = AvailableSignerResponseSchema(many=True)
 certificate_history_response_schema = CertificateHistoryResponseSchema(many=True)
+public_certificate_type_response_schema = PublicCertificateTypeResponseSchema(many=True)
+public_certificate_request_schema = PublicCertificateRequestSchema()
+public_certificate_lookup_schema = PublicCertificateLookupSchema()
+public_certificate_status_response_schema = PublicCertificateStatusResponseSchema()
+public_certificate_validation_response_schema = PublicCertificateValidationResponseSchema()
 
 
 @certificates_bp.get("/types")
@@ -140,7 +152,12 @@ def list_certificates():
         "search": request.args.get("search", type=str),
     }
     items = certificate_service.list_certificates(filters)
-    return jsonify({"data": certificates_response_schema.dump(items)}), 200
+    result = paginate_collection(
+        items,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": certificates_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @certificates_bp.get("/<int:certificate_id>")
@@ -222,3 +239,42 @@ def cancel_certificate(certificate_id):
     payload = certificate_action_schema.load(request.get_json() or {})
     item = certificate_service.cancel_certificate(certificate_id, payload.get("reason"))
     return jsonify({"message": "Certificate cancelled successfully", "data": certificate_response_schema.dump(item)}), 200
+
+
+@public_certificates_bp.get("/types")
+def list_public_certificate_types():
+    items = certificate_service.list_public_request_types()
+    return jsonify({"data": public_certificate_type_response_schema.dump(items)}), 200
+
+
+@public_certificates_bp.post("/request")
+def create_public_certificate_request():
+    payload = public_certificate_request_schema.load(request.get_json() or {})
+    item = certificate_service.create_public_request(payload)
+    return (
+        jsonify(
+            {
+                "message": "Certificate request submitted successfully",
+                "data": {
+                    "request_number": item.request_number,
+                    "status": item.status,
+                    "certificate_type_code": item.certificate_type.code,
+                },
+            }
+        ),
+        201,
+    )
+
+
+@public_certificates_bp.post("/status")
+def get_public_certificate_status():
+    payload = public_certificate_lookup_schema.load(request.get_json() or {})
+    item = certificate_service.get_public_certificate_status(payload)
+    return jsonify({"data": public_certificate_status_response_schema.dump(item)}), 200
+
+
+@public_certificates_bp.post("/validate")
+def validate_public_certificate():
+    payload = public_certificate_lookup_schema.load(request.get_json() or {})
+    item = certificate_service.validate_public_certificate(payload)
+    return jsonify({"data": public_certificate_validation_response_schema.dump(item)}), 200

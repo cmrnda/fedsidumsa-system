@@ -21,7 +21,7 @@ class Certificate(db.Model, TimestampMixin):
     issued_at = db.Column(db.DateTime(timezone=True))
     delivered_at = db.Column(db.DateTime(timezone=True))
 
-    teacher = db.relationship("Teacher")
+    teacher = db.relationship("Teacher", back_populates="certificates")
     certificate_type = db.relationship("CertificateType", back_populates="certificates")
     template = db.relationship("CertificateTemplate", back_populates="certificates")
     event = db.relationship("CertifiableEvent", back_populates="certificates")
@@ -32,7 +32,7 @@ class Certificate(db.Model, TimestampMixin):
         "CertificateStatusHistory",
         back_populates="certificate",
         cascade="all, delete-orphan",
-        order_by="CertificateStatusHistory.changed_at.desc()",
+        order_by="CertificateStatusHistory.created_at.desc()",
     )
 
     __table_args__ = (

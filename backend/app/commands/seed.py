@@ -66,6 +66,38 @@ def seed_certificate_types():
     click.echo("Certificate types seeded successfully")
 
 
+@click.command("seed-debt-concepts")
+@with_appcontext
+def seed_debt_concepts():
+    from app.models.obligation_concept import ObligationConcept
+
+    items = [
+        {
+            "code": "ordinary_contribution",
+            "name": "Aporte ordinario",
+            "description": "Regular teacher contribution",
+        },
+        {
+            "code": "extraordinary_contribution",
+            "name": "Aporte extraordinario",
+            "description": "Exceptional institutional contribution",
+        },
+        {
+            "code": "documentation_penalty",
+            "name": "Regularizacion documental",
+            "description": "Pending documentation related obligation",
+        },
+    ]
+
+    for item in items:
+        existing = ObligationConcept.query.filter_by(code=item["code"]).first()
+        if not existing:
+            db.session.add(ObligationConcept(**item))
+
+    db.session.commit()
+    click.echo("Debt concepts seeded successfully")
+
+
 @click.command("create-admin")
 @click.option("--username", prompt=True)
 @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)

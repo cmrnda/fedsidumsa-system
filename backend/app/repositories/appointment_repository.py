@@ -1,13 +1,15 @@
 from sqlalchemy.orm import joinedload
 
 from app.models.appointment import Appointment
+from app.models.position import Position
 
 
 class AppointmentRepository:
     def get_all(self, filters=None):
         query = Appointment.query.options(
-            joinedload(Appointment.position).joinedload("position_group"),
-            joinedload(Appointment.position).joinedload("instance"),
+            joinedload(Appointment.teacher),
+            joinedload(Appointment.position).joinedload(Position.position_group),
+            joinedload(Appointment.position).joinedload(Position.instance),
             joinedload(Appointment.period),
             joinedload(Appointment.supporting_document),
         )
@@ -24,16 +26,18 @@ class AppointmentRepository:
 
     def get_by_id(self, appointment_id):
         return Appointment.query.options(
-            joinedload(Appointment.position).joinedload("position_group"),
-            joinedload(Appointment.position).joinedload("instance"),
+            joinedload(Appointment.teacher),
+            joinedload(Appointment.position).joinedload(Position.position_group),
+            joinedload(Appointment.position).joinedload(Position.instance),
             joinedload(Appointment.period),
             joinedload(Appointment.supporting_document),
         ).filter(Appointment.id == appointment_id).first()
 
     def get_overlapping_active(self, teacher_id, start_date, end_date=None, exclude_id=None):
         query = Appointment.query.options(
-            joinedload(Appointment.position).joinedload("position_group"),
-            joinedload(Appointment.position).joinedload("instance"),
+            joinedload(Appointment.teacher),
+            joinedload(Appointment.position).joinedload(Position.position_group),
+            joinedload(Appointment.position).joinedload(Position.instance),
         ).filter(
             Appointment.teacher_id == teacher_id,
             Appointment.status == "active",

@@ -32,6 +32,12 @@ class CertificateTypeResponseSchema(Schema):
     updated_at = fields.DateTime()
 
 
+class PublicCertificateTypeResponseSchema(Schema):
+    code = fields.String()
+    name = fields.String()
+    description = fields.String()
+
+
 class CertificateTemplateCreateSchema(Schema):
     certificate_type_id = fields.Integer(required=True)
     name = fields.String(required=True, validate=validate.Length(min=2, max=150))
@@ -144,6 +150,43 @@ class CertificateStatusActionSchema(Schema):
     reason = fields.String(required=False, allow_none=True)
 
 
+class PublicCertificateRequestSchema(Schema):
+    certificate_type_code = fields.String(required=True, validate=validate.Length(min=2, max=50))
+    ci = fields.String(required=True, validate=validate.Length(min=3, max=20))
+    ci_extension = fields.String(required=False, allow_none=True, validate=validate.Length(max=10))
+    purpose = fields.String(required=False, allow_none=True, validate=validate.Length(max=180))
+
+
+class PublicCertificateLookupSchema(Schema):
+    request_number = fields.String(required=True, validate=validate.Length(min=5, max=40))
+    ci = fields.String(required=True, validate=validate.Length(min=3, max=20))
+    ci_extension = fields.String(required=False, allow_none=True, validate=validate.Length(max=10))
+
+
+class PublicCertificateStatusResponseSchema(Schema):
+    request_number = fields.String()
+    certificate_type_code = fields.String()
+    certificate_type_name = fields.String()
+    status = fields.String()
+    public_status = fields.String()
+    created_at = fields.DateTime()
+    issued_at = fields.DateTime()
+    delivered_at = fields.DateTime()
+    message = fields.String()
+
+
+class PublicCertificateValidationResponseSchema(Schema):
+    request_number = fields.String()
+    certificate_type_code = fields.String()
+    certificate_type_name = fields.String()
+    is_valid = fields.Boolean()
+    status = fields.String()
+    public_status = fields.String()
+    issued_at = fields.DateTime()
+    delivered_at = fields.DateTime()
+    message = fields.String()
+
+
 class AvailableSignerResponseSchema(Schema):
     appointment_id = fields.Integer()
     teacher_id = fields.Integer()
@@ -212,6 +255,8 @@ class CertificateResponseSchema(Schema):
     certificate_type_code = fields.Method("get_type_code")
     template_name = fields.Method("get_template_name")
     event_name = fields.Method("get_event_name")
+    submission_channel = fields.Method("get_submission_channel")
+    submission_channel_label = fields.Method("get_submission_channel_label")
     signers = fields.Nested(CertificateSignerResponseSchema, many=True)
     history = fields.Nested(CertificateHistoryResponseSchema, many=True)
 
@@ -229,3 +274,9 @@ class CertificateResponseSchema(Schema):
 
     def get_event_name(self, obj):
         return obj.event.name if obj.event else None
+
+    def get_submission_channel(self, obj):
+        return "public" if obj.requested_by_user_id is None else "internal"
+
+    def get_submission_channel_label(self, obj):
+        return "Solicitud pública" if obj.requested_by_user_id is None else "Gestión interna"

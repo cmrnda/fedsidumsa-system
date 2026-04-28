@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
+from app.pagination import paginate_collection
 from app.schemas.teacher import TeacherCreateSchema, TeacherResponseSchema, TeacherUpdateSchema
 from app.security.decorators import roles_required
 from app.services.teacher_service import TeacherService
@@ -23,7 +24,12 @@ def list_teachers():
         "status": request.args.get("status", type=str),
     }
     teachers = teacher_service.list_teachers(filters)
-    return jsonify({"data": teachers_response_schema.dump(teachers)}), 200
+    result = paginate_collection(
+        teachers,
+        page=request.args.get("page", type=int),
+        per_page=request.args.get("per_page", type=int),
+    )
+    return jsonify({"data": teachers_response_schema.dump(result["items"]), "pagination": result["pagination"]}), 200
 
 
 @teachers_bp.get("/<int:teacher_id>")
