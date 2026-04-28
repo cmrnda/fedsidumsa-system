@@ -39,4 +39,4 @@ yarn-debug.log*
 yarn-error.log*
 
 # OS
-*.swp
+*.swp.codex
