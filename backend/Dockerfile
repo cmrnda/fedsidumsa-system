@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["flask", "--app", "run.py", "run", "--host=0.0.0.0", "--port=5000"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"]
