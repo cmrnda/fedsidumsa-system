@@ -1,4 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # Proyecto monorepo:
 # - backend/  -> Flask
 # - frontend/ -> Angular
@@ -27,18 +26,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install backend dependencies
+      - name: Install backend dependencies into package
         working-directory: ./backend
         run: |
-          python -m venv antenv
-          source antenv/bin/activate
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --target="./.python_packages/lib/site-packages" -r requirements.txt
 
       - name: Create backend deployment zip
         run: |
           cd backend
-          zip -r ../backend-app.zip . -x "antenv/*" "__pycache__/*" "*.pyc" ".git/*"
+          zip -r ../backend-app.zip . -x "__pycache__/*" "*.pyc" ".git/*" ".dockerignore" "Dockerfile" "docker-compose.yml"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
