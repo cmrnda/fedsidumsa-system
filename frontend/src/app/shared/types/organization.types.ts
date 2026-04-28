@@ -88,4 +88,12 @@ export interface Appointment {
   observation?: string | null;
   created_at: string;
   updated_at: string;
+  teacher_name?: string | null;
+  period_name?: string | null;
+  position_name?: string | null;
+  instance_name?: string | null;
+  position_group_name?: string | null;
+  supporting_document_label?: string | null;
+  validity_state?: 'current' | 'scheduled' | 'expired' | 'finished' | 'revoked' | 'cancelled' | string;
+  can_act_as_signer?: boolean;
 }

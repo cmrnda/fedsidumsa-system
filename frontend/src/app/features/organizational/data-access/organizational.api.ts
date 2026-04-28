@@ -1,8 +1,10 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
+import { SKIP_HTTP_ERROR_NOTIFICATION } from '../../../core/interceptors/http-error.interceptor';
+import { PaginatedResponse } from '../../../shared/types/pagination.types';
 import {
   Appointment,
   IncompatibilityRule,
@@ -20,8 +22,10 @@ export class OrganizationalApi {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/organizational`;
 
-  getPeriods(): Observable<{ data: ManagementPeriod[] }> {
-    return this.http.get<{ data: ManagementPeriod[] }>(`${this.baseUrl}/periods`);
+  getPeriods(params?: Record<string, string | number | null | undefined>): Observable<PaginatedResponse<ManagementPeriod>> {
+    return this.http.get<PaginatedResponse<ManagementPeriod>>(`${this.baseUrl}/periods`, {
+      params: this.buildParams(params),
+    });
   }
 
   createPeriod(payload: {
@@ -34,11 +38,14 @@ export class OrganizationalApi {
     return this.http.post<{ message: string; data: ManagementPeriod }>(
       `${this.baseUrl}/periods`,
       payload,
+      { context: this.quietContext() },
     );
   }
 
-  getInstances(): Observable<{ data: OrganizationalInstance[] }> {
-    return this.http.get<{ data: OrganizationalInstance[] }>(`${this.baseUrl}/instances`);
+  getInstances(params?: Record<string, string | number | null | undefined>): Observable<PaginatedResponse<OrganizationalInstance>> {
+    return this.http.get<PaginatedResponse<OrganizationalInstance>>(`${this.baseUrl}/instances`, {
+      params: this.buildParams(params),
+    });
   }
 
   createInstance(payload: {
@@ -51,11 +58,14 @@ export class OrganizationalApi {
     return this.http.post<{ message: string; data: OrganizationalInstance }>(
       `${this.baseUrl}/instances`,
       payload,
+      { context: this.quietContext() },
     );
   }
 
-  getPositionGroups(): Observable<{ data: PositionGroup[] }> {
-    return this.http.get<{ data: PositionGroup[] }>(`${this.baseUrl}/position-groups`);
+  getPositionGroups(params?: Record<string, string | number | null | undefined>): Observable<PaginatedResponse<PositionGroup>> {
+    return this.http.get<PaginatedResponse<PositionGroup>>(`${this.baseUrl}/position-groups`, {
+      params: this.buildParams(params),
+    });
   }
 
   createPositionGroup(payload: {
@@ -66,11 +76,14 @@ export class OrganizationalApi {
     return this.http.post<{ message: string; data: PositionGroup }>(
       `${this.baseUrl}/position-groups`,
       payload,
+      { context: this.quietContext() },
     );
   }
 
-  getPositions(): Observable<{ data: Position[] }> {
-    return this.http.get<{ data: Position[] }>(`${this.baseUrl}/positions`);
+  getPositions(params?: Record<string, string | number | null | undefined>): Observable<PaginatedResponse<Position>> {
+    return this.http.get<PaginatedResponse<Position>>(`${this.baseUrl}/positions`, {
+      params: this.buildParams(params),
+    });
   }
 
   createPosition(payload: {
@@ -83,11 +96,14 @@ export class OrganizationalApi {
     return this.http.post<{ message: string; data: Position }>(
       `${this.baseUrl}/positions`,
       payload,
+      { context: this.quietContext() },
     );
   }
 
-  getDocuments(): Observable<{ data: SupportingDocument[] }> {
-    return this.http.get<{ data: SupportingDocument[] }>(`${this.baseUrl}/documents`);
+  getDocuments(params?: Record<string, string | number | null | undefined>): Observable<PaginatedResponse<SupportingDocument>> {
+    return this.http.get<PaginatedResponse<SupportingDocument>>(`${this.baseUrl}/documents`, {
+      params: this.buildParams(params),
+    });
   }
 
   createDocument(payload: {
@@ -102,13 +118,14 @@ export class OrganizationalApi {
     return this.http.post<{ message: string; data: SupportingDocument }>(
       `${this.baseUrl}/documents`,
       payload,
+      { context: this.quietContext() },
     );
   }
 
-  getIncompatibilityRules(): Observable<{ data: IncompatibilityRule[] }> {
-    return this.http.get<{ data: IncompatibilityRule[] }>(
-      `${this.baseUrl}/incompatibility-rules`,
-    );
+  getIncompatibilityRules(params?: Record<string, string | number | null | undefined>): Observable<PaginatedResponse<IncompatibilityRule>> {
+    return this.http.get<PaginatedResponse<IncompatibilityRule>>(`${this.baseUrl}/incompatibility-rules`, {
+      params: this.buildParams(params),
+    });
   }
 
   createIncompatibilityRule(payload: {
@@ -120,11 +137,14 @@ export class OrganizationalApi {
     return this.http.post<{ message: string; data: IncompatibilityRule }>(
       `${this.baseUrl}/incompatibility-rules`,
       payload,
+      { context: this.quietContext() },
     );
   }
 
-  getAppointments(): Observable<{ data: Appointment[] }> {
-    return this.http.get<{ data: Appointment[] }>(`${this.baseUrl}/appointments`);
+  getAppointments(params?: Record<string, string | number | null | undefined>): Observable<PaginatedResponse<Appointment>> {
+    return this.http.get<PaginatedResponse<Appointment>>(`${this.baseUrl}/appointments`, {
+      params: this.buildParams(params),
+    });
   }
 
   createAppointment(payload: {
@@ -141,6 +161,23 @@ export class OrganizationalApi {
     return this.http.post<{ message: string; data: Appointment }>(
       `${this.baseUrl}/appointments`,
       payload,
+      { context: this.quietContext() },
     );
+  }
+
+  private quietContext(): HttpContext {
+    return new HttpContext().set(SKIP_HTTP_ERROR_NOTIFICATION, true);
+  }
+
+  private buildParams(params?: Record<string, string | number | null | undefined>): HttpParams {
+    let httpParams = new HttpParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        httpParams = httpParams.set(key, String(value));
+      }
+    });
+
+    return httpParams;
   }
 }

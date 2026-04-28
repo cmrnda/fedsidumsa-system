@@ -9,142 +9,65 @@ import {
   formatTeacherStatus,
   teacherStatusOptions,
 } from '../../../../shared/utils/ui-helpers';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state.component';
+import { InlineAlertComponent } from '../../../../shared/ui/inline-alert.component';
+import { PageHeaderComponent } from '../../../../shared/ui/page-header.component';
+import { PaginationComponent } from '../../../../shared/ui/pagination.component';
+import { SectionCardComponent } from '../../../../shared/ui/section-card.component';
+import { SlideOverComponent } from '../../../../shared/ui/slide-over.component';
+import { StatusBadgeComponent } from '../../../../shared/ui/status-badge.component';
+import { SummaryCardComponent } from '../../../../shared/ui/summary-card.component';
+import { TableShellComponent } from '../../../../shared/ui/table-shell.component';
+import { ToolbarComponent } from '../../../../shared/ui/toolbar.component';
+import { paginateItems } from '../../../../shared/utils/ui-helpers';
 import { TeachersApi } from '../../data-access/teachers.api';
 
 @Component({
   selector: 'app-teachers-list-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    EmptyStateComponent,
+    InlineAlertComponent,
+    PageHeaderComponent,
+    PaginationComponent,
+    SectionCardComponent,
+    SlideOverComponent,
+    StatusBadgeComponent,
+    SummaryCardComponent,
+    TableShellComponent,
+    ToolbarComponent,
+  ],
   template: `
     <section class="space-y-6">
-      <div class="grid gap-5 xl:grid-cols-[1.15fr,0.85fr]">
-        <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
-          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Módulo de docentes</p>
-          <h1 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">Registro claro y rápido de docentes</h1>
-          <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
-            Este módulo está pensado para que administración pueda crear, revisar y ubicar docentes sin navegar entre pantallas innecesarias.
-          </p>
+      <ui-page-header
+        eyebrow="Módulo de docentes"
+        title="Búsqueda, registro y revisión rápida"
+        description="La vista principal prioriza encontrar al docente correcto. El alta se resuelve en un panel lateral más simple y con menos ruido visual."
+      >
+        <div header-actions class="flex flex-wrap gap-3">
+          <button
+            type="button"
+            (click)="drawerOpen.set(true)"
+            class="app-button-primary"
+          >
+            <span class="material-symbols-rounded text-[18px]">person_add</span>
+            Nuevo docente
+          </button>
+        </div>
+      </ui-page-header>
 
-          <div class="mt-6 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-2xl bg-slate-50 p-4">
-              <p class="text-sm text-slate-500">Total registrados</p>
-              <p class="mt-2 text-2xl font-bold text-slate-950">{{ teachers().length }}</p>
-            </div>
-            <div class="rounded-2xl bg-emerald-50 p-4">
-              <p class="text-sm text-emerald-700">Activos</p>
-              <p class="mt-2 text-2xl font-bold text-emerald-900">{{ activeTeachersCount() }}</p>
-            </div>
-            <div class="rounded-2xl bg-amber-50 p-4">
-              <p class="text-sm text-amber-700">Mostrados</p>
-              <p class="mt-2 text-2xl font-bold text-amber-900">{{ filteredTeachers().length }}</p>
-            </div>
-          </div>
-        </article>
-
-        <article class="rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-cyan-50 to-white p-6 shadow-sm">
-          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Uso recomendado</p>
-          <ul class="mt-4 space-y-4 text-sm leading-6 text-slate-700">
-            <li class="flex gap-3">
-              <span class="material-symbols-rounded text-cyan-700">badge</span>
-              Registre primero el CI, nombres y apellidos para evitar duplicados.
-            </li>
-            <li class="flex gap-3">
-              <span class="material-symbols-rounded text-cyan-700">alternate_email</span>
-              Correo y teléfono son útiles para ubicar rápidamente a la persona.
-            </li>
-            <li class="flex gap-3">
-              <span class="material-symbols-rounded text-cyan-700">assignment_ind</span>
-              Luego use el docente creado en el flujo de designaciones.
-            </li>
-          </ul>
-        </article>
+      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <ui-summary-card label="Total registrados" [value]="teachers().length" icon="groups" tone="slate" />
+        <ui-summary-card label="Activos" [value]="activeTeachersCount()" icon="verified" tone="emerald" />
+        <ui-summary-card label="Mostrados" [value]="filteredTeachers().length" icon="filter_alt" tone="amber" />
       </div>
 
-      <div class="grid gap-6 xl:grid-cols-[420px,1fr]">
-        <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-rounded rounded-2xl bg-cyan-50 p-3 text-cyan-700">person_add</span>
-            <div>
-              <h2 class="text-xl font-bold text-slate-950">Nuevo docente</h2>
-              <p class="text-sm text-slate-500">Complete solo los datos necesarios para comenzar.</p>
-            </div>
-          </div>
-
-          <form [formGroup]="form" (ngSubmit)="submit()" class="mt-6 space-y-4">
-            <div class="grid gap-4 sm:grid-cols-2">
-              <label class="block">
-                <span class="mb-2 block text-sm font-semibold text-slate-700">CI</span>
-                <input formControlName="ci" type="text" placeholder="Ej. 1234567" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-              </label>
-
-              <label class="block">
-                <span class="mb-2 block text-sm font-semibold text-slate-700">Complemento</span>
-                <input formControlName="ci_extension" type="text" placeholder="LP, CBBA, etc." class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-              </label>
-            </div>
-
-            <label class="block">
-              <span class="mb-2 block text-sm font-semibold text-slate-700">Nombres</span>
-              <input formControlName="first_names" type="text" placeholder="Nombres del docente" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            </label>
-
-            <label class="block">
-              <span class="mb-2 block text-sm font-semibold text-slate-700">Apellidos</span>
-              <input formControlName="last_names" type="text" placeholder="Apellidos del docente" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            </label>
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <label class="block">
-                <span class="mb-2 block text-sm font-semibold text-slate-700">Correo electrónico</span>
-                <input formControlName="email" type="email" placeholder="docente@umsa.bo" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-              </label>
-
-              <label class="block">
-                <span class="mb-2 block text-sm font-semibold text-slate-700">Teléfono</span>
-                <input formControlName="phone" type="text" placeholder="Número de contacto" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-              </label>
-            </div>
-
-            <label class="block">
-              <span class="mb-2 block text-sm font-semibold text-slate-700">Estado</span>
-              <select formControlName="status" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
-                @for (option of teacherStatusOptions; track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-            </label>
-
-            @if (error()) {
-              <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {{ error() }}
-              </div>
-            }
-
-            @if (success()) {
-              <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {{ success() }}
-              </div>
-            }
-
-            <button
-              type="submit"
-              [disabled]="form.invalid || loading()"
-              class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <span class="material-symbols-rounded text-[18px]">{{ loading() ? 'progress_activity' : 'save' }}</span>
-              {{ loading() ? 'Guardando...' : 'Registrar docente' }}
-            </button>
-          </form>
-        </article>
-
-        <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2 class="text-xl font-bold text-slate-950">Listado de docentes</h2>
-              <p class="text-sm text-slate-500">Busque por nombre, apellido, CI o estado.</p>
-            </div>
-
-            <div class="flex flex-col gap-3 sm:flex-row">
+      <ui-section-card title="Listado principal" description="Busque por nombre, CI o estado antes de registrar un nuevo docente." icon="groups">
+        <ui-toolbar>
+          <div class="flex w-full flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div class="flex flex-col gap-3 md:flex-row">
               <label class="block min-w-[240px]">
                 <span class="mb-2 block text-sm font-semibold text-slate-700">Buscar</span>
                 <input
@@ -152,7 +75,7 @@ import { TeachersApi } from '../../data-access/teachers.api';
                   (input)="searchTerm.set(($any($event.target).value ?? '').trimStart())"
                   type="text"
                   placeholder="Ej. Pérez o 1234567"
-                  class="w-full rounded-2xl border border-slate-300 px-4 py-3"
+                  class="app-field"
                 />
               </label>
 
@@ -161,7 +84,7 @@ import { TeachersApi } from '../../data-access/teachers.api';
                 <select
                   [value]="statusFilter()"
                   (change)="statusFilter.set($any($event.target).value)"
-                  class="w-full rounded-2xl border border-slate-300 px-4 py-3"
+                  class="app-field"
                 >
                   <option value="">Todos</option>
                   @for (option of teacherStatusOptions; track option.value) {
@@ -173,60 +96,141 @@ import { TeachersApi } from '../../data-access/teachers.api';
               <button
                 type="button"
                 (click)="loadTeachers()"
-                class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-900"
+                class="app-button-secondary"
               >
                 <span class="material-symbols-rounded text-[18px]">refresh</span>
                 Actualizar
               </button>
             </div>
           </div>
+        </ui-toolbar>
 
-          <div class="mt-6 overflow-hidden rounded-3xl border border-slate-200">
-            <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-slate-200 text-sm">
-                <thead class="bg-slate-50">
-                  <tr class="text-left text-slate-500">
-                    <th class="px-4 py-3 font-semibold">Docente</th>
-                    <th class="px-4 py-3 font-semibold">CI</th>
-                    <th class="px-4 py-3 font-semibold">Contacto</th>
-                    <th class="px-4 py-3 font-semibold">Estado</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 bg-white">
-                  @for (teacher of filteredTeachers(); track teacher.id) {
-                    <tr class="align-top">
-                      <td class="px-4 py-4">
-                        <p class="font-semibold text-slate-950">{{ fullName(teacher) }}</p>
-                        <p class="mt-1 text-xs text-slate-500">
-                          {{ teacher.teacher_code || 'Sin código interno' }}
-                        </p>
-                      </td>
-                      <td class="px-4 py-4 text-slate-700">
-                        {{ teacher.ci }} {{ teacher.ci_extension || '' }}
-                      </td>
-                      <td class="px-4 py-4 text-slate-700">
-                        <p>{{ teacher.email || 'Sin correo' }}</p>
-                        <p class="mt-1 text-xs text-slate-500">{{ teacher.phone || 'Sin teléfono' }}</p>
-                      </td>
-                      <td class="px-4 py-4">
-                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                          {{ formatStatus(teacher.status) }}
-                        </span>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+        <div class="mt-5">
+          <ui-table-shell [empty]="!filteredTeachers().length" emptyMessage="No se encontraron docentes con los filtros actuales.">
+          <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50">
+              <tr class="text-left text-slate-500">
+                <th class="px-4 py-3 font-semibold">Docente</th>
+                <th class="px-4 py-3 font-semibold">CI</th>
+                <th class="px-4 py-3 font-semibold">Contacto</th>
+                <th class="px-4 py-3 font-semibold">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
+              @for (teacher of paginatedTeachers().items; track teacher.id) {
+                <tr class="align-top">
+                  <td class="px-4 py-4">
+                    <p class="font-semibold text-slate-950">{{ fullName(teacher) }}</p>
+                    <p class="mt-1 text-xs text-slate-500">
+                      {{ teacher.teacher_code || 'Sin código interno' }}
+                    </p>
+                  </td>
+                  <td class="px-4 py-4 text-slate-700">
+                    {{ teacher.ci }} {{ teacher.ci_extension || '' }}
+                  </td>
+                  <td class="px-4 py-4 text-slate-700">
+                    <p>{{ teacher.email || 'Sin correo' }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ teacher.phone || 'Sin teléfono' }}</p>
+                  </td>
+                  <td class="px-4 py-4">
+                    <ui-status-badge
+                      [label]="formatStatus(teacher.status)"
+                      [tone]="teacher.status === 'active' ? 'emerald' : teacher.status === 'inactive' ? 'amber' : 'slate'"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <ui-pagination
+            [page]="paginatedTeachers().page"
+            [pages]="paginatedTeachers().pages"
+            [perPage]="paginatedTeachers().perPage"
+            [total]="paginatedTeachers().total"
+            [start]="paginatedTeachers().start"
+            [end]="paginatedTeachers().end"
+            (pageChange)="tablePage.set($event)"
+            (perPageChange)="updatePerPage($event)"
+          />
+          </ui-table-shell>
+        </div>
+      </ui-section-card>
 
-            @if (!filteredTeachers().length) {
-              <div class="px-6 py-10 text-center text-sm text-slate-500">
-                No se encontraron docentes con los filtros actuales.
-              </div>
-            }
+      <ui-slide-over
+        [open]="drawerOpen()"
+        eyebrow="Nuevo docente"
+        title="Registro rápido"
+        description="Complete los datos mínimos. El resto puede ampliarse después sin perder el flujo principal."
+        (closed)="closeDrawer()"
+      >
+        <form [formGroup]="form" class="space-y-4">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">CI</span>
+              <input formControlName="ci" type="text" placeholder="Ej. 1234567" class="app-field" />
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Complemento</span>
+              <input formControlName="ci_extension" type="text" placeholder="LP, CBBA, etc." class="app-field" />
+            </label>
           </div>
-        </article>
-      </div>
+
+          <label class="block">
+            <span class="mb-2 block text-sm font-semibold text-slate-700">Nombres</span>
+            <input formControlName="first_names" type="text" placeholder="Nombres del docente" class="app-field" />
+          </label>
+
+          <label class="block">
+            <span class="mb-2 block text-sm font-semibold text-slate-700">Apellidos</span>
+            <input formControlName="last_names" type="text" placeholder="Apellidos del docente" class="app-field" />
+          </label>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Correo electrónico</span>
+              <input formControlName="email" type="email" placeholder="docente@umsa.bo" class="app-field" />
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Teléfono</span>
+              <input formControlName="phone" type="text" placeholder="Número de contacto" class="app-field" />
+            </label>
+          </div>
+
+          <label class="block">
+            <span class="mb-2 block text-sm font-semibold text-slate-700">Estado</span>
+            <select formControlName="status" class="app-field">
+              @for (option of teacherStatusOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          @if (error()) {
+            <ui-inline-alert title="No se pudo registrar" [message]="error()" tone="danger" icon="error" />
+          }
+
+          @if (success()) {
+            <ui-inline-alert title="Registro correcto" [message]="success()" tone="success" icon="task_alt" />
+          }
+        </form>
+
+        <div drawer-actions class="flex gap-3">
+          <button type="button" (click)="closeDrawer()" class="app-button-secondary">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="submit()"
+            [disabled]="form.invalid || loading()"
+            class="app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span class="material-symbols-rounded text-[18px]">{{ loading() ? 'progress_activity' : 'save' }}</span>
+            {{ loading() ? 'Guardando...' : 'Registrar docente' }}
+          </button>
+        </div>
+      </ui-slide-over>
     </section>
   `,
 })
@@ -240,6 +244,9 @@ export class TeachersListPage implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly success = signal('');
+  protected readonly drawerOpen = signal(false);
+  protected readonly tablePage = signal(1);
+  protected readonly perPage = signal(10);
   protected readonly teacherStatusOptions = teacherStatusOptions;
   protected readonly filteredTeachers = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
@@ -265,6 +272,9 @@ export class TeachersListPage implements OnInit {
   });
   protected readonly activeTeachersCount = computed(
     () => this.teachers().filter((teacher) => teacher.status === 'active').length,
+  );
+  protected readonly paginatedTeachers = computed(() =>
+    paginateItems(this.filteredTeachers(), this.tablePage(), this.perPage()),
   );
 
   protected readonly form = this.fb.nonNullable.group({
@@ -295,6 +305,17 @@ export class TeachersListPage implements OnInit {
     });
   }
 
+  protected closeDrawer(): void {
+    this.drawerOpen.set(false);
+    this.error.set('');
+    this.success.set('');
+  }
+
+  protected updatePerPage(value: number): void {
+    this.perPage.set(value);
+    this.tablePage.set(1);
+  }
+
   protected submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -318,6 +339,7 @@ export class TeachersListPage implements OnInit {
           status: 'active',
         });
         this.loadTeachers();
+        this.drawerOpen.set(false);
         this.loading.set(false);
       },
       error: (errorResponse) => {

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -12,6 +13,7 @@ import {
   CertificateType,
   EventParticipation,
 } from '../../../../shared/types/certificate.types';
+import { TeacherClearance } from '../../../../shared/types/debt.types';
 import { Teacher } from '../../../../shared/types/teacher.types';
 import {
   certificateStatusOptions,
@@ -20,105 +22,116 @@ import {
   formatDate,
   formatFullName,
 } from '../../../../shared/utils/ui-helpers';
+import { DebtsApi } from '../../../debts/data-access/debts.api';
 import { TeachersApi } from '../../../teachers/data-access/teachers.api';
 import { CertificatesApi } from '../../data-access/certificates.api';
+import { InlineAlertComponent } from '../../../../shared/ui/inline-alert.component';
+import { PageHeaderComponent } from '../../../../shared/ui/page-header.component';
+import { PaginationComponent } from '../../../../shared/ui/pagination.component';
+import { SectionCardComponent } from '../../../../shared/ui/section-card.component';
+import { StatusBadgeComponent } from '../../../../shared/ui/status-badge.component';
+import { SummaryCardComponent } from '../../../../shared/ui/summary-card.component';
+import { TableShellComponent } from '../../../../shared/ui/table-shell.component';
+import { StepperComponent } from '../../../../shared/ui/stepper.component';
+import { paginateItems } from '../../../../shared/utils/ui-helpers';
 
 @Component({
   selector: 'app-certificates-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    InlineAlertComponent,
+    PageHeaderComponent,
+    PaginationComponent,
+    SectionCardComponent,
+    StatusBadgeComponent,
+    SummaryCardComponent,
+    TableShellComponent,
+    StepperComponent,
+  ],
   template: `
     <section class="space-y-6">
-      <div class="grid gap-5 xl:grid-cols-[1.1fr,0.9fr]">
-        <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
-          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Módulo de certificados</p>
-          <h1 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">Seguimiento claro y emisión con pasos guiados</h1>
-          <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
-            Desde aquí administración puede revisar solicitudes, identificar pendientes y crear nuevos certificados sin ingresar datos técnicos ni resolver relaciones manualmente.
-          </p>
+      <ui-page-header
+        eyebrow="Certificados"
+        title="Seguimiento y emisión administrativa"
+        description="Revise solicitudes, filtre estados y cree certificados con un flujo guiado, claro y sin relaciones técnicas visibles."
+      >
+        <button
+          header-actions
+          type="button"
+          (click)="openCreateModal()"
+          class="app-button-primary"
+        >
+          <span class="material-symbols-rounded text-[18px]">post_add</span>
+          Nuevo certificado
+        </button>
 
-          <div class="mt-6 grid gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl bg-slate-50 p-4">
-              <p class="text-sm text-slate-500">Total</p>
-              <p class="mt-2 text-2xl font-bold text-slate-950">{{ certificates().length }}</p>
-            </div>
-            <div class="rounded-2xl bg-amber-50 p-4">
-              <p class="text-sm text-amber-700">Solicitados</p>
-              <p class="mt-2 text-2xl font-bold text-amber-900">{{ countByStatus('requested') }}</p>
-            </div>
-            <div class="rounded-2xl bg-cyan-50 p-4">
-              <p class="text-sm text-cyan-700">En revisión</p>
-              <p class="mt-2 text-2xl font-bold text-cyan-900">{{ countByStatus('under_review') }}</p>
-            </div>
-            <div class="rounded-2xl bg-emerald-50 p-4">
-              <p class="text-sm text-emerald-700">Emitidos</p>
-              <p class="mt-2 text-2xl font-bold text-emerald-900">{{ countByStatus('issued') }}</p>
-            </div>
-          </div>
-        </article>
+        <a
+          header-actions
+          routerLink="/certificates/setup"
+          class="app-button-secondary"
+        >
+          <span class="material-symbols-rounded text-[18px]">settings</span>
+          Configurar catálogos
+        </a>
+      </ui-page-header>
 
-        <article class="rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-cyan-50 to-white p-6 shadow-sm">
-          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Tareas recomendadas</p>
-          <div class="mt-4 space-y-3">
-            <button type="button" (click)="openCreateModal()" class="flex w-full items-start gap-3 rounded-2xl border border-cyan-200 bg-white px-4 py-4 text-left transition hover:border-cyan-400">
-              <span class="material-symbols-rounded text-cyan-700">post_add</span>
-              <span>
-                <span class="block font-semibold text-slate-950">Nuevo certificado</span>
-                <span class="mt-1 block text-sm text-slate-600">Asistente por pasos para crear, revisar y solicitar.</span>
-              </span>
-            </button>
-
-            <a routerLink="/certificates/setup" class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-cyan-300">
-              <span class="material-symbols-rounded text-cyan-700">settings</span>
-              <span>
-                <span class="block font-semibold text-slate-950">Configurar catálogos</span>
-                <span class="mt-1 block text-sm text-slate-600">Tipos, plantillas, eventos y participaciones.</span>
-              </span>
-            </a>
-          </div>
-        </article>
+      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <ui-summary-card label="Total" [value]="certificates().length" icon="description" tone="slate" />
+        <ui-summary-card label="Solicitados" [value]="countByStatus('requested')" icon="inbox" tone="amber" />
+        <ui-summary-card label="En revisión" [value]="countByStatus('under_review')" icon="rule" tone="cyan" />
+        <ui-summary-card label="Emitidos" [value]="countByStatus('issued')" icon="verified" tone="emerald" />
+        <ui-summary-card label="Solicitudes públicas" [value]="publicRequestCount()" icon="public" tone="rose" />
       </div>
 
-      <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 class="text-xl font-bold text-slate-950">Listado de certificados</h2>
-            <p class="text-sm text-slate-500">Busque por docente, código, evento o tipo. El siguiente paso queda visible en cada registro.</p>
-          </div>
+      <ui-section-card
+        title="Listado de certificados"
+        description="Busque por docente, código, evento o tipo. El siguiente paso queda visible en cada registro."
+        icon="list_alt"
+      >
+        <div section-actions class="flex flex-col gap-3 sm:flex-row">
+          <label class="block min-w-[220px]">
+            <span class="mb-2 block text-sm font-semibold text-slate-700">Buscar</span>
+            <input [value]="searchTerm()" (input)="searchTerm.set(($any($event.target).value ?? '').trimStart())" type="text" placeholder="Ej. CERT-2026 o Pérez" class="app-field" />
+          </label>
 
-          <div class="flex flex-col gap-3 sm:flex-row">
-            <label class="block min-w-[220px]">
-              <span class="mb-2 block text-sm font-semibold text-slate-700">Buscar</span>
-              <input [value]="searchTerm()" (input)="searchTerm.set(($any($event.target).value ?? '').trimStart())" type="text" placeholder="Ej. CERT-2026 o Pérez" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            </label>
+          <label class="block min-w-[220px]">
+            <span class="mb-2 block text-sm font-semibold text-slate-700">Estado</span>
+            <select [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value)" class="app-field">
+              <option value="">Todos</option>
+              @for (option of certificateStatusOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
 
-            <label class="block min-w-[220px]">
-              <span class="mb-2 block text-sm font-semibold text-slate-700">Estado</span>
-              <select [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value)" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
-                <option value="">Todos</option>
-                @for (option of certificateStatusOptions; track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-            </label>
+          <label class="block min-w-[220px]">
+            <span class="mb-2 block text-sm font-semibold text-slate-700">Tipo</span>
+            <select [value]="typeFilter()" (change)="typeFilter.set($any($event.target).value)" class="app-field">
+              <option value="">Todos</option>
+              @for (type of activeTypes(); track type.id) {
+                <option [value]="type.id">{{ type.name }}</option>
+              }
+            </select>
+          </label>
 
-            <label class="block min-w-[220px]">
-              <span class="mb-2 block text-sm font-semibold text-slate-700">Tipo</span>
-              <select [value]="typeFilter()" (change)="typeFilter.set($any($event.target).value)" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
-                <option value="">Todos</option>
-                @for (type of activeTypes(); track type.id) {
-                  <option [value]="type.id">{{ type.name }}</option>
-                }
-              </select>
-            </label>
+          <label class="block min-w-[220px]">
+            <span class="mb-2 block text-sm font-semibold text-slate-700">Origen</span>
+            <select [value]="originFilter()" (change)="originFilter.set($any($event.target).value)" class="app-field">
+              <option value="">Todos</option>
+              <option value="internal">Gestión interna</option>
+              <option value="public">Solicitud pública</option>
+            </select>
+          </label>
 
-            <button type="button" (click)="loadAll()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">
-              Actualizar
-            </button>
-          </div>
+          <button type="button" (click)="loadAll()" class="app-button-secondary">
+            Actualizar
+          </button>
         </div>
 
-        <div class="mt-6 overflow-hidden rounded-3xl border border-slate-200">
+        <ui-table-shell [empty]="!filteredCertificates().length" emptyMessage="No se encontraron certificados con los filtros actuales.">
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
               <thead class="bg-slate-50">
@@ -126,13 +139,14 @@ import { CertificatesApi } from '../../data-access/certificates.api';
                   <th class="px-4 py-3 font-semibold">Solicitud</th>
                   <th class="px-4 py-3 font-semibold">Docente</th>
                   <th class="px-4 py-3 font-semibold">Tipo</th>
+                  <th class="px-4 py-3 font-semibold">Origen</th>
                   <th class="px-4 py-3 font-semibold">Estado</th>
                   <th class="px-4 py-3 font-semibold">Próximo paso</th>
                   <th class="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 bg-white">
-                @for (item of filteredCertificates(); track item.id) {
+                @for (item of paginatedCertificates().items; track item.id) {
                   <tr>
                     <td class="px-4 py-4">
                       <p class="font-semibold text-slate-950">{{ item.request_number }}</p>
@@ -144,13 +158,14 @@ import { CertificatesApi } from '../../data-access/certificates.api';
                     </td>
                     <td class="px-4 py-4 text-slate-700">{{ item.certificate_type_name }}</td>
                     <td class="px-4 py-4">
-                      <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                        {{ statusLabel(item.status) }}
-                      </span>
+                      <ui-status-badge [label]="item.submission_channel_label" [tone]="item.submission_channel === 'public' ? 'rose' : 'slate'" />
+                    </td>
+                    <td class="px-4 py-4">
+                      <ui-status-badge [label]="statusLabel(item.status)" [tone]="statusTone(item.status)" />
                     </td>
                     <td class="px-4 py-4 text-slate-700">{{ nextStepLabel(item.status) }}</td>
                     <td class="px-4 py-4">
-                      <a [routerLink]="['/certificates', item.id]" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">
+                      <a [routerLink]="['/certificates', item.id]" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-900">
                         <span class="material-symbols-rounded text-[16px]">visibility</span>
                         Ver detalle
                       </a>
@@ -160,16 +175,22 @@ import { CertificatesApi } from '../../data-access/certificates.api';
               </tbody>
             </table>
           </div>
-
-          @if (!filteredCertificates().length) {
-            <div class="px-6 py-10 text-center text-sm text-slate-500">No se encontraron certificados con los filtros actuales.</div>
-          }
-        </div>
-      </article>
+          <ui-pagination
+            [page]="paginatedCertificates().page"
+            [pages]="paginatedCertificates().pages"
+            [perPage]="paginatedCertificates().perPage"
+            [total]="paginatedCertificates().total"
+            [start]="paginatedCertificates().start"
+            [end]="paginatedCertificates().end"
+            (pageChange)="tablePage.set($event)"
+            (perPageChange)="updatePerPage($event)"
+          />
+        </ui-table-shell>
+      </ui-section-card>
 
       @if (createModalOpen()) {
         <div class="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/50 px-4 py-6">
-          <div class="flex h-full max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl">
+          <div class="flex h-full max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
             <div class="border-b border-slate-200 px-6 py-5">
               <div class="flex items-start justify-between gap-4">
                 <div>
@@ -177,107 +198,143 @@ import { CertificatesApi } from '../../data-access/certificates.api';
                   <h2 class="mt-1 text-2xl font-bold text-slate-950">Asistente de creación</h2>
                   <p class="mt-2 text-sm text-slate-500">{{ wizardStepDescription() }}</p>
                 </div>
-                <button type="button" (click)="closeCreateModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-700">
+                <button type="button" (click)="closeCreateModal()" class="app-icon-button">
                   <span class="material-symbols-rounded">close</span>
                 </button>
               </div>
 
-              <div class="mt-5 grid gap-3 md:grid-cols-3">
-                @for (step of wizardSteps; track step.id) {
-                  <div class="rounded-2xl border px-4 py-3"
-                    [class.border-cyan-300]="wizardStep() === step.id"
-                    [class.bg-cyan-50]="wizardStep() === step.id"
-                    [class.border-slate-200]="wizardStep() !== step.id"
-                  >
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Paso {{ step.id }}</p>
-                    <p class="mt-1 font-semibold text-slate-950">{{ step.label }}</p>
-                  </div>
-                }
+              <div class="mt-5">
+                <ui-stepper [steps]="wizardSteps" [currentStep]="wizardStep()" />
               </div>
             </div>
 
             <div class="flex-1 overflow-y-auto px-6 py-6">
               @if (wizardStep() === 1) {
-                <div class="grid gap-5 lg:grid-cols-2">
-                  <label class="block">
-                    <span class="mb-2 block text-sm font-semibold text-slate-700">Docente</span>
-                    <select formControlName="teacher_id" [formGroup]="form" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
-                      <option [ngValue]="null">Seleccione un docente</option>
-                      @for (teacher of teachers(); track teacher.id) {
-                        <option [ngValue]="teacher.id">{{ teacherName(teacher) }}</option>
+                <div class="grid gap-5 lg:grid-cols-[1.1fr,0.9fr]">
+                  <ui-section-card title="Datos principales" description="Seleccione docente, tipo, plantilla y dependencias del certificado." icon="assignment">
+                    <div class="grid gap-5 lg:grid-cols-2">
+                      <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Docente</span>
+                        <select formControlName="teacher_id" [formGroup]="form" class="app-field">
+                          <option [ngValue]="null">Seleccione un docente</option>
+                          @for (teacher of teachers(); track teacher.id) {
+                            <option [ngValue]="teacher.id">{{ teacherName(teacher) }}</option>
+                          }
+                        </select>
+                      </label>
+
+                      <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Tipo de certificado</span>
+                        <select formControlName="certificate_type_id" [formGroup]="form" class="app-field">
+                          <option [ngValue]="null">Seleccione un tipo</option>
+                          @for (item of activeTypes(); track item.id) {
+                            <option [ngValue]="item.id">{{ item.name }}</option>
+                          }
+                        </select>
+                      </label>
+
+                      <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Plantilla</span>
+                        <select formControlName="template_id" [formGroup]="form" class="app-field">
+                          <option [ngValue]="null">Seleccione una plantilla</option>
+                          @for (item of filteredTemplates(); track item.id) {
+                            <option [ngValue]="item.id">{{ item.name }}</option>
+                          }
+                        </select>
+                      </label>
+
+                      @if (selectedTypeRequiresEvent()) {
+                        <label class="block">
+                          <span class="mb-2 block text-sm font-semibold text-slate-700">Evento</span>
+                          <select formControlName="event_id" [formGroup]="form" class="app-field">
+                            <option [ngValue]="null">Seleccione un evento</option>
+                            @for (item of events(); track item.id) {
+                              <option [ngValue]="item.id">{{ item.name }}</option>
+                            }
+                          </select>
+                        </label>
                       }
-                    </select>
-                  </label>
 
-                  <label class="block">
-                    <span class="mb-2 block text-sm font-semibold text-slate-700">Tipo de certificado</span>
-                    <select formControlName="certificate_type_id" [formGroup]="form" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
-                      <option [ngValue]="null">Seleccione un tipo</option>
-                      @for (item of activeTypes(); track item.id) {
-                        <option [ngValue]="item.id">{{ item.name }}</option>
+                      @if (!selectedTypeIsNoDebt()) {
+                        <label class="block lg:col-span-2">
+                          <span class="mb-2 block text-sm font-semibold text-slate-700">Participación registrada</span>
+                          <select formControlName="participation_id" [formGroup]="form" class="app-field">
+                            <option [ngValue]="null">Opcional</option>
+                            @for (item of filteredParticipations(); track item.id) {
+                              <option [ngValue]="item.id">{{ participationLabel(item) }}</option>
+                            }
+                          </select>
+                        </label>
                       }
-                    </select>
-                  </label>
 
-                  <label class="block">
-                    <span class="mb-2 block text-sm font-semibold text-slate-700">Plantilla</span>
-                    <select formControlName="template_id" [formGroup]="form" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
-                      <option [ngValue]="null">Seleccione una plantilla</option>
-                      @for (item of filteredTemplates(); track item.id) {
-                        <option [ngValue]="item.id">{{ item.name }}</option>
+                      <label class="block lg:col-span-2">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Propósito</span>
+                        <input formControlName="purpose" [formGroup]="form" type="text" placeholder="Motivo o uso del certificado" class="app-field" />
+                      </label>
+
+                      <label class="block lg:col-span-2">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Observación</span>
+                        <textarea formControlName="observation" [formGroup]="form" rows="4" placeholder="Dato adicional si corresponde" class="app-field"></textarea>
+                      </label>
+                    </div>
+                  </ui-section-card>
+
+                  <ui-section-card title="Validación y ayuda" description="Antes de avanzar, valide dependencias y requisitos del trámite." icon="info">
+                    <div class="space-y-4">
+                      <ui-inline-alert
+                        tone="info"
+                        title="Sugerencia operativa"
+                        message="Complete docente, tipo y plantilla antes de pasar al paso de firmantes."
+                      />
+
+                      @if (selectedTypeIsNoDebt()) {
+                        <div
+                          class="rounded-2xl border p-5"
+                          [class.border-emerald-200]="noDebtClearance()?.eligible"
+                          [class.bg-emerald-50]="noDebtClearance()?.eligible"
+                          [class.border-amber-200]="noDebtClearance() && !noDebtClearance()!.eligible"
+                          [class.bg-amber-50]="noDebtClearance() && !noDebtClearance()!.eligible"
+                          [class.border-slate-200]="!noDebtClearance()"
+                          [class.bg-slate-50]="!noDebtClearance()"
+                        >
+                          <p class="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Validación de no adeudo</p>
+                          @if (noDebtClearance()) {
+                            <p class="mt-3 text-xl font-bold text-slate-950">
+                              {{ noDebtClearance()!.eligible ? 'Docente apto para no adeudo' : 'Docente con saldo pendiente' }}
+                            </p>
+                            <p class="mt-2 text-sm text-slate-700">{{ noDebtClearance()!.message }}</p>
+                            <p class="mt-3 text-sm text-slate-600">
+                              Saldo pendiente: <strong>{{ formatMoney(noDebtClearance()!.pending_amount) }}</strong>
+                              · Registros pendientes: <strong>{{ noDebtClearance()!.pending_obligations_count }}</strong>
+                            </p>
+                            <p class="mt-3 text-xs text-slate-500">
+                              El sistema permite crear la solicitud, pero solo aprobar o emitir cuando el docente esté apto.
+                            </p>
+                          } @else {
+                            <p class="mt-3 text-sm text-slate-600">Seleccione un docente para verificar automáticamente si está apto para certificado de no adeudo.</p>
+                          }
+                        </div>
+                      } @else {
+                        <ui-inline-alert
+                          tone="success"
+                          title="Relaciones visibles"
+                          message="La participación y el evento se filtran automáticamente según el docente y el tipo seleccionado."
+                        />
                       }
-                    </select>
-                  </label>
-
-                  @if (selectedTypeRequiresEvent()) {
-                    <label class="block">
-                      <span class="mb-2 block text-sm font-semibold text-slate-700">Evento</span>
-                      <select formControlName="event_id" [formGroup]="form" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
-                        <option [ngValue]="null">Seleccione un evento</option>
-                        @for (item of events(); track item.id) {
-                          <option [ngValue]="item.id">{{ item.name }}</option>
-                        }
-                      </select>
-                    </label>
-                  }
-
-                  <label class="block lg:col-span-2">
-                    <span class="mb-2 block text-sm font-semibold text-slate-700">Participación registrada</span>
-                    <select formControlName="participation_id" [formGroup]="form" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
-                      <option [ngValue]="null">Opcional</option>
-                      @for (item of filteredParticipations(); track item.id) {
-                        <option [ngValue]="item.id">{{ participationLabel(item) }}</option>
-                      }
-                    </select>
-                  </label>
-
-                  <label class="block lg:col-span-2">
-                    <span class="mb-2 block text-sm font-semibold text-slate-700">Propósito</span>
-                    <input formControlName="purpose" [formGroup]="form" type="text" placeholder="Motivo o uso del certificado" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-                  </label>
-
-                  <label class="block lg:col-span-2">
-                    <span class="mb-2 block text-sm font-semibold text-slate-700">Observación</span>
-                    <textarea formControlName="observation" [formGroup]="form" rows="4" placeholder="Dato adicional si corresponde" class="w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
-                  </label>
+                    </div>
+                  </ui-section-card>
                 </div>
               }
 
               @if (wizardStep() === 2) {
-                <div class="space-y-4">
-                  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h3 class="text-lg font-bold text-slate-950">Seleccionar firmantes</h3>
-                      <p class="text-sm text-slate-500">Solo se muestran designaciones vigentes marcadas como firmantes.</p>
-                    </div>
-                    <button type="button" (click)="loadAvailableSigners()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">
-                      Actualizar lista
-                    </button>
-                  </div>
+                <ui-section-card title="Seleccionar firmantes" description="Solo se muestran designaciones vigentes marcadas como firmantes." icon="draw">
+                  <button section-actions type="button" (click)="loadAvailableSigners()" class="app-button-secondary">
+                    Actualizar lista
+                  </button>
 
                   <div class="grid gap-3">
                     @for (signer of availableSigners(); track signer.appointment_id) {
-                      <label class="flex items-start gap-3 rounded-2xl border border-slate-200 px-4 py-4 transition hover:border-cyan-300"
+                      <label class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-4 transition hover:border-cyan-300"
                         [class.bg-cyan-50]="isSignerSelected(signer.appointment_id)"
                         [class.border-cyan-300]="isSignerSelected(signer.appointment_id)"
                       >
@@ -296,18 +353,19 @@ import { CertificatesApi } from '../../data-access/certificates.api';
                   </div>
 
                   @if (!availableSigners().length) {
-                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                      No hay firmantes válidos disponibles. Revise las designaciones activas con opción de firma.
-                    </div>
+                    <ui-inline-alert
+                      tone="warning"
+                      title="No hay firmantes válidos"
+                      message="Revise las designaciones activas marcadas con opción de firma antes de continuar."
+                    />
                   }
-                </div>
+                </ui-section-card>
               }
 
               @if (wizardStep() === 3) {
                 <div class="grid gap-5 lg:grid-cols-[1fr,0.9fr]">
-                  <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                    <h3 class="text-lg font-bold text-slate-950">Resumen del certificado</h3>
-                    <dl class="mt-4 space-y-3 text-sm">
+                  <ui-section-card title="Resumen del certificado" description="Revise los datos principales antes de guardar o solicitar." icon="fact_check">
+                    <dl class="space-y-3 text-sm">
                       <div class="flex items-start justify-between gap-4">
                         <dt class="text-slate-500">Docente</dt>
                         <dd class="text-right font-semibold text-slate-950">{{ selectedTeacherLabel() }}</dd>
@@ -333,16 +391,32 @@ import { CertificatesApi } from '../../data-access/certificates.api';
                         <dd class="text-right font-semibold text-slate-950">{{ selectedSignerIds().length }}</dd>
                       </div>
                     </dl>
-                  </div>
+                  </ui-section-card>
 
-                  <div class="rounded-3xl border border-slate-200 bg-white p-5">
-                    <h3 class="text-lg font-bold text-slate-950">Antes de guardar</h3>
-                    <ul class="mt-4 space-y-3 text-sm text-slate-600">
+                  <ui-section-card title="Antes de guardar" description="Use este bloque como revisión final del trámite." icon="checklist">
+                    <ul class="space-y-3 text-sm text-slate-600">
                       <li class="flex gap-3"><span class="material-symbols-rounded text-cyan-700">check_circle</span><span>Verifique que el docente y el tipo sean correctos.</span></li>
                       <li class="flex gap-3"><span class="material-symbols-rounded text-cyan-700">check_circle</span><span>Confirme que los firmantes correspondan a designaciones vigentes.</span></li>
                       <li class="flex gap-3"><span class="material-symbols-rounded text-cyan-700">check_circle</span><span>Si desea que entre a revisión de inmediato, use “Crear y solicitar”.</span></li>
                     </ul>
-                  </div>
+
+                  @if (selectedTypeIsNoDebt() && noDebtClearance()) {
+                      <div class="mt-5 rounded-2xl border p-4"
+                        [class.border-emerald-200]="noDebtClearance()!.eligible"
+                        [class.bg-emerald-50]="noDebtClearance()!.eligible"
+                        [class.border-amber-200]="!noDebtClearance()!.eligible"
+                        [class.bg-amber-50]="!noDebtClearance()!.eligible"
+                      >
+                        <p class="font-semibold text-slate-950">
+                          {{ noDebtClearance()!.eligible ? 'El docente está apto para no adeudo.' : 'El docente aún no está apto para no adeudo.' }}
+                        </p>
+                        <p class="mt-2 text-sm text-slate-700">
+                          {{ noDebtClearance()!.message }}
+                        </p>
+                      </div>
+                    }
+
+                  </ui-section-card>
                 </div>
               }
             </div>
@@ -351,7 +425,7 @@ import { CertificatesApi } from '../../data-access/certificates.api';
               <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex gap-3">
                   @if (wizardStep() > 1) {
-                    <button type="button" (click)="goToPreviousStep()" class="rounded-2xl border border-slate-300 px-4 py-3 font-semibold text-slate-700">
+                    <button type="button" (click)="goToPreviousStep()" class="app-button-secondary">
                       Anterior
                     </button>
                   }
@@ -359,14 +433,14 @@ import { CertificatesApi } from '../../data-access/certificates.api';
 
                 <div class="flex flex-col gap-3 sm:flex-row">
                   @if (wizardStep() < 3) {
-                    <button type="button" (click)="goToNextStep()" class="rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white">
+                    <button type="button" (click)="goToNextStep()" class="app-button-primary">
                       Siguiente
                     </button>
                   } @else {
-                    <button type="button" (click)="submit('draft')" [disabled]="loading()" class="rounded-2xl border border-slate-300 px-4 py-3 font-semibold text-slate-700">
+                    <button type="button" (click)="submit('draft')" [disabled]="loading()" class="app-button-secondary">
                       Guardar borrador
                     </button>
-                    <button type="button" (click)="submit('requested')" [disabled]="loading()" class="rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white">
+                    <button type="button" (click)="submit('requested')" [disabled]="loading()" class="app-button-primary">
                       Crear y solicitar
                     </button>
                   }
@@ -381,8 +455,10 @@ import { CertificatesApi } from '../../data-access/certificates.api';
 })
 export class CertificatesPage implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly certificatesApi = inject(CertificatesApi);
   private readonly teachersApi = inject(TeachersApi);
+  private readonly debtsApi = inject(DebtsApi);
   private readonly uiFeedback = inject(UiFeedbackService);
 
   protected readonly teachers = signal<Teacher[]>([]);
@@ -393,12 +469,16 @@ export class CertificatesPage implements OnInit {
   protected readonly availableSigners = signal<AvailableSigner[]>([]);
   protected readonly certificates = signal<Certificate[]>([]);
   protected readonly selectedSignerIds = signal<number[]>([]);
+  protected readonly noDebtClearance = signal<TeacherClearance | null>(null);
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal('');
   protected readonly typeFilter = signal('');
+  protected readonly originFilter = signal('');
   protected readonly loading = signal(false);
   protected readonly createModalOpen = signal(false);
   protected readonly wizardStep = signal(1);
+  protected readonly tablePage = signal(1);
+  protected readonly perPage = signal(10);
   protected readonly certificateStatusOptions = certificateStatusOptions;
   protected readonly wizardSteps = [
     { id: 1, label: 'Datos principales' },
@@ -433,23 +513,32 @@ export class CertificatesPage implements OnInit {
     const term = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
     const typeId = this.typeFilter();
+    const origin = this.originFilter();
 
     return this.certificates().filter((item) => {
       const matchesStatus = !status || item.status === status;
       const matchesType = !typeId || String(item.certificate_type_id) === typeId;
+      const matchesOrigin = !origin || item.submission_channel === origin;
       const matchesSearch = !term || [
         item.request_number,
         item.teacher_name,
         item.certificate_type_name,
         item.event_name,
+        item.submission_channel_label,
       ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
         .includes(term);
-      return matchesStatus && matchesType && matchesSearch;
+      return matchesStatus && matchesType && matchesOrigin && matchesSearch;
     });
   });
+  protected readonly publicRequestCount = computed(
+    () => this.certificates().filter((item) => item.submission_channel === 'public').length,
+  );
+  protected readonly paginatedCertificates = computed(() =>
+    paginateItems(this.filteredCertificates(), this.tablePage(), this.perPage()),
+  );
 
   protected readonly form = this.fb.group({
     teacher_id: [null as number | null, [Validators.required]],
@@ -462,6 +551,27 @@ export class CertificatesPage implements OnInit {
   });
 
   ngOnInit(): void {
+    this.form.controls.teacher_id.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshNoDebtClearance());
+
+    this.form.controls.certificate_type_id.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.selectedTypeIsNoDebt()) {
+          this.form.patchValue({
+            event_id: null,
+            participation_id: null,
+          });
+        }
+
+        if (!this.filteredTemplates().some((item) => item.id === this.form.controls.template_id.value)) {
+          this.form.patchValue({ template_id: null });
+        }
+
+        this.refreshNoDebtClearance();
+      });
+
     this.loadAll();
   }
 
@@ -490,6 +600,7 @@ export class CertificatesPage implements OnInit {
     this.createModalOpen.set(false);
     this.wizardStep.set(1);
     this.selectedSignerIds.set([]);
+    this.noDebtClearance.set(null);
     this.form.reset({
       teacher_id: null,
       certificate_type_id: null,
@@ -529,6 +640,10 @@ export class CertificatesPage implements OnInit {
 
   protected selectedTypeRequiresEvent(): boolean {
     return this.selectedType()?.requires_event ?? false;
+  }
+
+  protected selectedTypeIsNoDebt(): boolean {
+    return this.selectedType()?.code === 'no_debt';
   }
 
   protected toggleSigner(appointmentId: number, checked: boolean): void {
@@ -635,6 +750,22 @@ export class CertificatesPage implements OnInit {
     return formatCertificateStatus(status);
   }
 
+  protected statusTone(status: Certificate['status']): 'slate' | 'cyan' | 'amber' | 'emerald' | 'rose' {
+    if (status === 'requested') {
+      return 'amber';
+    }
+    if (status === 'under_review') {
+      return 'cyan';
+    }
+    if (status === 'approved' || status === 'issued' || status === 'delivered') {
+      return 'emerald';
+    }
+    if (status === 'rejected' || status === 'cancelled') {
+      return 'rose';
+    }
+    return 'slate';
+  }
+
   protected nextStepLabel(status: string): string {
     if (status === 'draft') {
       return 'Enviar a solicitud';
@@ -658,7 +789,38 @@ export class CertificatesPage implements OnInit {
     return formatDate(value);
   }
 
+  protected updatePerPage(value: number): void {
+    this.perPage.set(value);
+    this.tablePage.set(1);
+  }
+
   protected countByStatus(status: Certificate['status']): number {
     return this.certificates().filter((item) => item.status === status).length;
+  }
+
+  protected formatMoney(value: number): string {
+    return new Intl.NumberFormat('es-BO', {
+      style: 'currency',
+      currency: 'BOB',
+      minimumFractionDigits: 2,
+    }).format(value || 0);
+  }
+
+  private refreshNoDebtClearance(): void {
+    if (!this.selectedTypeIsNoDebt()) {
+      this.noDebtClearance.set(null);
+      return;
+    }
+
+    const teacherId = this.form.controls.teacher_id.value;
+    if (!teacherId) {
+      this.noDebtClearance.set(null);
+      return;
+    }
+
+    this.debtsApi.getClearance(Number(teacherId)).subscribe({
+      next: (response) => this.noDebtClearance.set(response.data),
+      error: () => this.noDebtClearance.set(null),
+    });
   }
 }

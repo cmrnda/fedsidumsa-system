@@ -1,13 +1,5 @@
-import { Injectable, signal } from '@angular/core';
-
-export type ToastTone = 'success' | 'error' | 'warning' | 'info';
-
-export interface ToastItem {
-  id: number;
-  title: string;
-  message?: string | null;
-  tone: ToastTone;
-}
+import { Injectable, inject, signal } from '@angular/core';
+import { NotificationService } from './notification.service';
 
 export interface ConfirmOptions {
   title: string;
@@ -29,30 +21,33 @@ export interface ConfirmResult {
   providedIn: 'root',
 })
 export class UiFeedbackService {
-  private toastId = 0;
+  private readonly notifications = inject(NotificationService);
   private confirmResolver: ((result: ConfirmResult) => void) | null = null;
 
-  readonly toasts = signal<ToastItem[]>([]);
   readonly confirmState = signal<ConfirmOptions | null>(null);
 
   success(title: string, message?: string): void {
-    this.showToast('success', title, message);
+    this.notifications.success(message || title, {
+      title: message ? title : null,
+    });
   }
 
   error(title: string, message?: string): void {
-    this.showToast('error', title, message);
+    this.notifications.error(message || title, {
+      title: message ? title : null,
+    });
   }
 
   warning(title: string, message?: string): void {
-    this.showToast('warning', title, message);
+    this.notifications.warning(message || title, {
+      title: message ? title : null,
+    });
   }
 
   info(title: string, message?: string): void {
-    this.showToast('info', title, message);
-  }
-
-  removeToast(id: number): void {
-    this.toasts.update((items) => items.filter((item) => item.id !== id));
+    this.notifications.info(message || title, {
+      title: message ? title : null,
+    });
   }
 
   confirm(options: ConfirmOptions): Promise<ConfirmResult> {
@@ -70,16 +65,5 @@ export class UiFeedbackService {
     }
 
     this.confirmState.set(null);
-  }
-
-  private showToast(tone: ToastTone, title: string, message?: string): void {
-    const id = ++this.toastId;
-    const item: ToastItem = { id, tone, title, message };
-
-    this.toasts.update((items) => [...items, item]);
-
-    window.setTimeout(() => {
-      this.removeToast(id);
-    }, 4200);
   }
 }

@@ -24,143 +24,161 @@ import {
   formatParticipationStatus,
   participationStatusOptions,
 } from '../../../../shared/utils/ui-helpers';
+import { InlineAlertComponent } from '../../../../shared/ui/inline-alert.component';
+import { PageHeaderComponent } from '../../../../shared/ui/page-header.component';
+import { SectionCardComponent } from '../../../../shared/ui/section-card.component';
+import { TableShellComponent } from '../../../../shared/ui/table-shell.component';
 
 @Component({
   selector: 'app-certificates-setup-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, InlineAlertComponent, PageHeaderComponent, SectionCardComponent, TableShellComponent],
   template: `
     <section class="space-y-6">
-      <div>
-        <a routerLink="/certificates" class="text-sm font-semibold text-cyan-700">← Volver a certificados</a>
-        <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Configuración del módulo</h1>
-        <p class="mt-2 text-sm text-slate-600">Aquí se preparan los datos base para que administración pueda emitir certificados sin fricción.</p>
-      </div>
+      <ui-page-header
+        backLink="/certificates"
+        backLabel="Volver a certificados"
+        eyebrow="Configuración del módulo"
+        title="Catálogos y datos base"
+        description="La configuración se organiza por bloques para evitar una pantalla técnica y saturada. Cada bloque prepara un insumo del flujo de certificados."
+      />
 
       <div class="grid gap-6 xl:grid-cols-2">
-        <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm">
-          <h2 class="text-xl font-bold text-slate-950">Tipos de certificado</h2>
+        <ui-section-card title="Tipos de certificado" description="Definen el comportamiento general del trámite." icon="category">
           <form [formGroup]="typeForm" (ngSubmit)="createType()" class="mt-4 space-y-3">
-            <input formControlName="code" type="text" placeholder="Código" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            <input formControlName="name" type="text" placeholder="Nombre" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            <textarea formControlName="description" rows="2" placeholder="Descripción" class="w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
+            <input formControlName="code" type="text" placeholder="Código" class="app-field" />
+            <input formControlName="name" type="text" placeholder="Nombre" class="app-field" />
+            <textarea formControlName="description" rows="2" placeholder="Descripción" class="app-field"></textarea>
             <label class="flex items-center gap-3 text-sm font-semibold text-slate-700"><input type="checkbox" formControlName="requires_event" /> Requiere evento</label>
-            <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white">Crear tipo</button>
+            <button type="submit" class="app-button-primary w-full">Crear tipo</button>
           </form>
 
-          <div class="mt-5 space-y-2">
+          <div class="mt-5">
+            <ui-table-shell [empty]="!types().length" emptyMessage="Aún no hay tipos registrados.">
+            <div class="space-y-2">
             @for (item of types(); track item.id) {
-              <div class="rounded-2xl border border-slate-200 px-4 py-3">
+              <div class="rounded-xl border border-slate-200 px-4 py-3">
                 <p class="font-semibold text-slate-950">{{ item.name }}</p>
                 <p class="text-sm text-slate-600">{{ item.code }}</p>
               </div>
             }
+            </div>
+            </ui-table-shell>
           </div>
-        </article>
+        </ui-section-card>
 
-        <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm">
-          <h2 class="text-xl font-bold text-slate-950">Plantillas</h2>
+        <ui-section-card title="Plantillas" description="Deje listas las variantes institucionales que usará administración." icon="article">
           <form [formGroup]="templateForm" (ngSubmit)="createTemplate()" class="mt-4 space-y-3">
-            <select formControlName="certificate_type_id" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
+            <select formControlName="certificate_type_id" class="app-field">
               <option [ngValue]="null">Seleccione tipo</option>
               @for (item of types(); track item.id) {
                 <option [ngValue]="item.id">{{ item.name }}</option>
               }
             </select>
-            <input formControlName="name" type="text" placeholder="Nombre de plantilla" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            <textarea formControlName="header_text" rows="2" placeholder="Encabezado" class="w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
-            <textarea formControlName="body_template" rows="4" placeholder="Texto principal del certificado" class="w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
-            <textarea formControlName="footer_text" rows="2" placeholder="Pie de página" class="w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
-            <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white">Crear plantilla</button>
+            <input formControlName="name" type="text" placeholder="Nombre de plantilla" class="app-field" />
+            <textarea formControlName="header_text" rows="2" placeholder="Encabezado" class="app-field"></textarea>
+            <textarea formControlName="body_template" rows="4" placeholder="Texto principal del certificado" class="app-field"></textarea>
+            <textarea formControlName="footer_text" rows="2" placeholder="Pie de página" class="app-field"></textarea>
+            <button type="submit" class="app-button-primary w-full">Crear plantilla</button>
           </form>
 
-          <div class="mt-5 space-y-2">
+          <div class="mt-5">
+            <ui-table-shell [empty]="!templates().length" emptyMessage="Aún no hay plantillas registradas.">
+            <div class="space-y-2">
             @for (item of templates(); track item.id) {
-              <div class="rounded-2xl border border-slate-200 px-4 py-3">
+              <div class="rounded-xl border border-slate-200 px-4 py-3">
                 <p class="font-semibold text-slate-950">{{ item.name }}</p>
                 <p class="text-sm text-slate-600">{{ typeName(item.certificate_type_id) }}</p>
               </div>
             }
-          </div>
-        </article>
-
-        <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm">
-          <h2 class="text-xl font-bold text-slate-950">Eventos certificables</h2>
-          <form [formGroup]="eventForm" (ngSubmit)="createEvent()" class="mt-4 space-y-3">
-            <input formControlName="name" type="text" placeholder="Nombre del evento" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            <input formControlName="location" type="text" placeholder="Lugar" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            <div class="grid gap-3 sm:grid-cols-2">
-              <input formControlName="start_date" type="date" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-              <input formControlName="end_date" type="date" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
             </div>
-            <select formControlName="status" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
+            </ui-table-shell>
+          </div>
+        </ui-section-card>
+
+        <ui-section-card title="Eventos certificables" description="Úselos cuando el tipo de certificado dependa de una actividad institucional." icon="event">
+          <form [formGroup]="eventForm" (ngSubmit)="createEvent()" class="mt-4 space-y-3">
+            <input formControlName="name" type="text" placeholder="Nombre del evento" class="app-field" />
+            <input formControlName="location" type="text" placeholder="Lugar" class="app-field" />
+            <div class="grid gap-3 sm:grid-cols-2">
+              <input formControlName="start_date" type="date" class="app-field" />
+              <input formControlName="end_date" type="date" class="app-field" />
+            </div>
+            <select formControlName="status" class="app-field">
               @for (option of eventStatusOptions; track option.value) {
                 <option [value]="option.value">{{ option.label }}</option>
               }
             </select>
-            <select formControlName="supporting_document_id" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
+            <select formControlName="supporting_document_id" class="app-field">
               <option [ngValue]="null">Documento de respaldo opcional</option>
               @for (item of documents(); track item.id) {
                 <option [ngValue]="item.id">{{ documentLabel(item) }}</option>
               }
             </select>
-            <textarea formControlName="description" rows="3" placeholder="Descripción" class="w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
-            <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white">Crear evento</button>
+            <textarea formControlName="description" rows="3" placeholder="Descripción" class="app-field"></textarea>
+            <button type="submit" class="app-button-primary w-full">Crear evento</button>
           </form>
 
-          <div class="mt-5 space-y-2">
+          <div class="mt-5">
+            <ui-table-shell [empty]="!events().length" emptyMessage="Aún no hay eventos registrados.">
+            <div class="space-y-2">
             @for (item of events(); track item.id) {
-              <div class="rounded-2xl border border-slate-200 px-4 py-3">
+              <div class="rounded-xl border border-slate-200 px-4 py-3">
                 <p class="font-semibold text-slate-950">{{ item.name }}</p>
                 <p class="text-sm text-slate-600">{{ formatDateLabel(item.start_date) }} · {{ eventStatusLabel(item.status) }}</p>
               </div>
             }
+            </div>
+            </ui-table-shell>
           </div>
-        </article>
+        </ui-section-card>
 
-        <article class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm">
-          <h2 class="text-xl font-bold text-slate-950">Participaciones</h2>
+        <ui-section-card title="Participaciones" description="Relacionan docentes con eventos para agilizar certificados de participación." icon="group_add">
           <form [formGroup]="participationForm" (ngSubmit)="createParticipation()" class="mt-4 space-y-3">
-            <select formControlName="teacher_id" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
+            <select formControlName="teacher_id" class="app-field">
               <option [ngValue]="null">Seleccione docente</option>
               @for (item of teachers(); track item.id) {
                 <option [ngValue]="item.id">{{ teacherName(item) }}</option>
               }
             </select>
-            <select formControlName="event_id" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
+            <select formControlName="event_id" class="app-field">
               <option [ngValue]="null">Seleccione evento</option>
               @for (item of events(); track item.id) {
                 <option [ngValue]="item.id">{{ item.name }}</option>
               }
             </select>
-            <input formControlName="role_name" type="text" placeholder="Rol en el evento" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            <input formControlName="participation_type" type="text" placeholder="Tipo de participación" class="w-full rounded-2xl border border-slate-300 px-4 py-3" />
-            <select formControlName="status" class="w-full rounded-2xl border border-slate-300 px-4 py-3">
+            <input formControlName="role_name" type="text" placeholder="Rol en el evento" class="app-field" />
+            <input formControlName="participation_type" type="text" placeholder="Tipo de participación" class="app-field" />
+            <select formControlName="status" class="app-field">
               @for (option of participationStatusOptions; track option.value) {
                 <option [value]="option.value">{{ option.label }}</option>
               }
             </select>
-            <textarea formControlName="observation" rows="2" placeholder="Observación" class="w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
-            <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white">Registrar participación</button>
+            <textarea formControlName="observation" rows="2" placeholder="Observación" class="app-field"></textarea>
+            <button type="submit" class="app-button-primary w-full">Registrar participación</button>
           </form>
 
-          <div class="mt-5 space-y-2">
+          <div class="mt-5">
+            <ui-table-shell [empty]="!participations().length" emptyMessage="Aún no hay participaciones registradas.">
+            <div class="space-y-2">
             @for (item of participations(); track item.id) {
-              <div class="rounded-2xl border border-slate-200 px-4 py-3">
+              <div class="rounded-xl border border-slate-200 px-4 py-3">
                 <p class="font-semibold text-slate-950">{{ participationLabel(item) }}</p>
                 <p class="text-sm text-slate-600">{{ item.participation_type }} · {{ participationStatusLabel(item.status) }}</p>
               </div>
             }
+            </div>
+            </ui-table-shell>
           </div>
-        </article>
+        </ui-section-card>
       </div>
 
       @if (message()) {
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ message() }}</div>
+        <ui-inline-alert title="Operación completada" [message]="message()" tone="success" icon="task_alt" />
       }
 
       @if (error()) {
-        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{{ error() }}</div>
+        <ui-inline-alert title="No se pudo completar la acción" [message]="error()" tone="danger" icon="error" />
       }
     </section>
   `,

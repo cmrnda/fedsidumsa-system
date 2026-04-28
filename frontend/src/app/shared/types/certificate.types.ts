@@ -9,6 +9,12 @@ export interface CertificateType {
   updated_at: string;
 }
 
+export interface PublicCertificateType {
+  code: string;
+  name: string;
+  description?: string | null;
+}
+
 export interface CertificateTemplate {
   id: number;
   certificate_type_id: number;
@@ -100,6 +106,38 @@ export interface Certificate {
   certificate_type_code: string;
   template_name: string;
   event_name?: string | null;
+  submission_channel: 'public' | 'internal' | string;
+  submission_channel_label: string;
   signers: CertificateSigner[];
   history: CertificateHistoryItem[];
+}
+
+export interface PublicCertificateRequestResult {
+  request_number: string;
+  status: string;
+  certificate_type_code: string;
+}
+
+export interface PublicCertificateStatus {
+  request_number: string;
+  certificate_type_code: string;
+  certificate_type_name: string;
+  status: string;
+  public_status: string;
+  created_at: string;
+  issued_at?: string | null;
+  delivered_at?: string | null;
+  message: string;
+}
+
+export interface PublicCertificateValidation {
+  request_number: string;
+  certificate_type_code: string;
+  certificate_type_name: string;
+  is_valid: boolean;
+  status: string;
+  public_status: string;
+  issued_at?: string | null;
+  delivered_at?: string | null;
+  message: string;
 }

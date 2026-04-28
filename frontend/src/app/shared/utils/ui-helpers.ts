@@ -3,6 +3,16 @@ export interface SelectOption<T extends string = string> {
   label: string;
 }
 
+export interface ClientPaginationResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  perPage: number;
+  pages: number;
+  start: number;
+  end: number;
+}
+
 const dateFormatter = new Intl.DateTimeFormat('es-BO', {
   day: '2-digit',
   month: 'short',
@@ -80,6 +90,20 @@ const participationStatusMap: Record<string, string> = {
   cancelled: 'Cancelado',
 };
 
+const obligationStatusMap: Record<string, string> = {
+  pending: 'Pendiente',
+  partial: 'Parcial',
+  paid: 'Pagado',
+  cancelled: 'Cancelado',
+};
+
+const systemRoleMap: Record<string, string> = {
+  admin: 'Administrador',
+  administration: 'Administración',
+  certificates: 'Certificados',
+  read_only: 'Solo lectura',
+};
+
 export const teacherStatusOptions: SelectOption[] = [
   { value: 'active', label: teacherStatusMap['active'] },
   { value: 'inactive', label: teacherStatusMap['inactive'] },
@@ -151,6 +175,13 @@ export const participationStatusOptions: SelectOption[] = [
   { value: 'cancelled', label: participationStatusMap['cancelled'] },
 ];
 
+export const obligationStatusOptions: SelectOption[] = [
+  { value: 'pending', label: obligationStatusMap['pending'] },
+  { value: 'partial', label: obligationStatusMap['partial'] },
+  { value: 'paid', label: obligationStatusMap['paid'] },
+  { value: 'cancelled', label: obligationStatusMap['cancelled'] },
+];
+
 export function formatApiError(errorResponse: unknown, fallback = 'No se pudo completar la solicitud'): string {
   const error = errorResponse as {
     error?: {
@@ -216,6 +247,33 @@ export function formatParticipationStatus(value: string): string {
   return participationStatusMap[value] || value;
 }
 
+export function formatObligationStatus(value: string): string {
+  return obligationStatusMap[value] || value;
+}
+
+export function formatSystemRole(value: string): string {
+  return systemRoleMap[value] || value;
+}
+
 export function formatFullName(firstNames?: string | null, lastNames?: string | null): string {
   return [firstNames, lastNames].filter(Boolean).join(' ').trim();
+}
+
+export function paginateItems<T>(items: T[], page: number, perPage: number): ClientPaginationResult<T> {
+  const normalizedPerPage = Math.max(perPage || 10, 1);
+  const total = items.length;
+  const pages = Math.max(Math.ceil(total / normalizedPerPage), 1);
+  const normalizedPage = Math.min(Math.max(page || 1, 1), pages);
+  const startIndex = (normalizedPage - 1) * normalizedPerPage;
+  const endIndex = startIndex + normalizedPerPage;
+
+  return {
+    items: items.slice(startIndex, endIndex),
+    total,
+    page: normalizedPage,
+    perPage: normalizedPerPage,
+    pages,
+    start: total ? startIndex + 1 : 0,
+    end: Math.min(endIndex, total),
+  };
 }

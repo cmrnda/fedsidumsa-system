@@ -1,8 +1,10 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
+import { SKIP_HTTP_ERROR_NOTIFICATION } from '../../../core/interceptors/http-error.interceptor';
+import { PaginatedResponse } from '../../../shared/types/pagination.types';
 import {
   AvailableSigner,
   CertifiableEvent,
@@ -18,10 +20,10 @@ import {
 })
 export class CertificatesApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiUrl}/certificates`;
+  private readonly baseUrl = `${environment.apiUrl}/certificates/`;
 
   getTypes(): Observable<{ data: CertificateType[] }> {
-    return this.http.get<{ data: CertificateType[] }>(`${this.baseUrl}/types`);
+    return this.http.get<{ data: CertificateType[] }>(`${this.baseUrl}types`);
   }
 
   createType(payload: {
@@ -31,11 +33,13 @@ export class CertificatesApi {
     requires_event: boolean;
     is_active: boolean;
   }): Observable<{ message: string; data: CertificateType }> {
-    return this.http.post<{ message: string; data: CertificateType }>(`${this.baseUrl}/types`, payload);
+    return this.http.post<{ message: string; data: CertificateType }>(`${this.baseUrl}types`, payload, {
+      context: this.quietContext(),
+    });
   }
 
   getTemplates(): Observable<{ data: CertificateTemplate[] }> {
-    return this.http.get<{ data: CertificateTemplate[] }>(`${this.baseUrl}/templates`);
+    return this.http.get<{ data: CertificateTemplate[] }>(`${this.baseUrl}templates`);
   }
 
   createTemplate(payload: {
@@ -46,11 +50,13 @@ export class CertificatesApi {
     footer_text?: string | null;
     is_active: boolean;
   }): Observable<{ message: string; data: CertificateTemplate }> {
-    return this.http.post<{ message: string; data: CertificateTemplate }>(`${this.baseUrl}/templates`, payload);
+    return this.http.post<{ message: string; data: CertificateTemplate }>(`${this.baseUrl}templates`, payload, {
+      context: this.quietContext(),
+    });
   }
 
   getEvents(): Observable<{ data: CertifiableEvent[] }> {
-    return this.http.get<{ data: CertifiableEvent[] }>(`${this.baseUrl}/events`);
+    return this.http.get<{ data: CertifiableEvent[] }>(`${this.baseUrl}events`);
   }
 
   createEvent(payload: {
@@ -62,11 +68,13 @@ export class CertificatesApi {
     status: string;
     supporting_document_id?: number | null;
   }): Observable<{ message: string; data: CertifiableEvent }> {
-    return this.http.post<{ message: string; data: CertifiableEvent }>(`${this.baseUrl}/events`, payload);
+    return this.http.post<{ message: string; data: CertifiableEvent }>(`${this.baseUrl}events`, payload, {
+      context: this.quietContext(),
+    });
   }
 
   getParticipations(): Observable<{ data: EventParticipation[] }> {
-    return this.http.get<{ data: EventParticipation[] }>(`${this.baseUrl}/participations`);
+    return this.http.get<{ data: EventParticipation[] }>(`${this.baseUrl}participations`);
   }
 
   createParticipation(payload: {
@@ -77,15 +85,17 @@ export class CertificatesApi {
     status: string;
     observation?: string | null;
   }): Observable<{ message: string; data: EventParticipation }> {
-    return this.http.post<{ message: string; data: EventParticipation }>(`${this.baseUrl}/participations`, payload);
+    return this.http.post<{ message: string; data: EventParticipation }>(`${this.baseUrl}participations`, payload, {
+      context: this.quietContext(),
+    });
   }
 
   getAvailableSigners(date?: string): Observable<{ data: AvailableSigner[] }> {
     const params = date ? new HttpParams().set('date', date) : undefined;
-    return this.http.get<{ data: AvailableSigner[] }>(`${this.baseUrl}/available-signers`, { params });
+    return this.http.get<{ data: AvailableSigner[] }>(`${this.baseUrl}available-signers`, { params });
   }
 
-  getCertificates(filters?: Record<string, string | number | null | undefined>): Observable<{ data: Certificate[] }> {
+  getCertificates(filters?: Record<string, string | number | null | undefined>): Observable<PaginatedResponse<Certificate>> {
     let params = new HttpParams();
 
     Object.entries(filters || {}).forEach(([key, value]) => {
@@ -94,11 +104,11 @@ export class CertificatesApi {
       }
     });
 
-    return this.http.get<{ data: Certificate[] }>(this.baseUrl, { params });
+    return this.http.get<PaginatedResponse<Certificate>>(this.baseUrl, { params });
   }
 
   getCertificate(id: number): Observable<{ data: Certificate }> {
-    return this.http.get<{ data: Certificate }>(`${this.baseUrl}/${id}`);
+    return this.http.get<{ data: Certificate }>(`${this.baseUrl}${id}`);
   }
 
   createCertificate(payload: {
@@ -112,7 +122,9 @@ export class CertificatesApi {
     signer_ids: Array<{ appointment_id: number; order_index: number; label_override?: string | null }>;
     status?: string;
   }): Observable<{ message: string; data: Certificate }> {
-    return this.http.post<{ message: string; data: Certificate }>(this.baseUrl, payload);
+    return this.http.post<{ message: string; data: Certificate }>(this.baseUrl, payload, {
+      context: this.quietContext(),
+    });
   }
 
   updateCertificate(
@@ -126,14 +138,22 @@ export class CertificatesApi {
       signer_ids?: Array<{ appointment_id: number; order_index: number; label_override?: string | null }>;
     },
   ): Observable<{ message: string; data: Certificate }> {
-    return this.http.put<{ message: string; data: Certificate }>(`${this.baseUrl}/${id}`, payload);
+    return this.http.put<{ message: string; data: Certificate }>(`${this.baseUrl}${id}`, payload, {
+      context: this.quietContext(),
+    });
   }
 
   getHistory(id: number): Observable<{ data: CertificateHistoryItem[] }> {
-    return this.http.get<{ data: CertificateHistoryItem[] }>(`${this.baseUrl}/${id}/history`);
+    return this.http.get<{ data: CertificateHistoryItem[] }>(`${this.baseUrl}${id}/history`);
   }
 
   changeStatus(id: number, action: 'request' | 'review' | 'approve' | 'reject' | 'issue' | 'deliver' | 'cancel', reason?: string) {
-    return this.http.post<{ message: string; data: Certificate }>(`${this.baseUrl}/${id}/${action}`, reason ? { reason } : {});
+    return this.http.post<{ message: string; data: Certificate }>(`${this.baseUrl}${id}/${action}`, reason ? { reason } : {}, {
+      context: this.quietContext(),
+    });
+  }
+
+  private quietContext(): HttpContext {
+    return new HttpContext().set(SKIP_HTTP_ERROR_NOTIFICATION, true);
   }
 }

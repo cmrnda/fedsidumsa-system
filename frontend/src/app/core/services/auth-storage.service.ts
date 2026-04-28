@@ -22,11 +22,58 @@ export class AuthStorageService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    return this.hasValidToken();
   }
 
   getUser<T>(): T | null {
     const raw = localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as T) : null;
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      this.clearSession();
+      return null;
+    }
+  }
+
+  hasValidToken(): boolean {
+    const token = this.getToken();
+
+    if (!token) {
+      return false;
+    }
+
+    const expiration = this.getTokenExpiration(token);
+
+    if (!expiration) {
+      return true;
+    }
+
+    if (Date.now() >= expiration) {
+      this.clearSession();
+      return false;
+    }
+
+    return true;
+  }
+
+  private getTokenExpiration(token: string): number | null {
+    const [, payload] = token.split('.');
+
+    if (!payload) {
+      return null;
+    }
+
+    try {
+      const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
+      const decoded = JSON.parse(atob(padded)) as { exp?: number };
+      return decoded.exp ? decoded.exp * 1000 : null;
+    } catch {
+      return null;
+    }
   }
 }
