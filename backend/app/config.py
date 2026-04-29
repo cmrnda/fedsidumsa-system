@@ -10,6 +10,7 @@ class BaseConfig:
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_SORT_KEYS = False
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 
 
 class DevelopmentConfig(BaseConfig):

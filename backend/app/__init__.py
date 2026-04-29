@@ -7,6 +7,20 @@ from app.errors import register_error_handlers
 from app.extensions import bcrypt, cors, db, jwt, migrate
 
 
+def _cors_origins(app):
+    configured_origins = [
+        origin.strip()
+        for origin in app.config.get("FRONTEND_URL", "").split(",")
+        if origin.strip()
+    ]
+
+    return [
+        "http://localhost:4200",
+        r"https://fedsidumsa-frontend.*\.azurestaticapps\.net",
+        *configured_origins,
+    ]
+
+
 def create_app():
     config_name = os.getenv("FLASK_ENV", "default")
     app = Flask(__name__)
@@ -16,7 +30,11 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     bcrypt.init_app(app)
-    cors.init_app(app)
+    cors.init_app(
+        app,
+        resources={r"/api/*": {"origins": _cors_origins(app)}},
+        allow_headers=["Content-Type", "Authorization"],
+    )
 
     from app.models.appointment import Appointment
     from app.models.certificate import Certificate
