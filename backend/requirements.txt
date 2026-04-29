@@ -3,6 +3,7 @@ Flask-SQLAlchemy
 Flask-Migrate
 Flask-JWT-Extended
 Flask-Bcrypt==1.0.1
+bcrypt==3.2.2
 Flask-Cors
 marshmallow
 python-dotenv
