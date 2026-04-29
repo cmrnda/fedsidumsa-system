@@ -8,17 +8,17 @@ from app.extensions import bcrypt, cors, db, jwt, migrate
 
 
 def _cors_origins(app):
-    configured_origins = [
-        origin.strip()
-        for origin in app.config.get("FRONTEND_URL", "").split(",")
-        if origin.strip()
+    allowed_origins = [
+        "http://localhost:4200",
+        "http://localhost:5000",
+        "https://gray-bush-0cf36530f.7.azurestaticapps.net",
     ]
 
-    return [
-        "http://localhost:4200",
-        r"https://fedsidumsa-frontend.*\.azurestaticapps\.net",
-        *configured_origins,
-    ]
+    frontend_url = app.config.get("FRONTEND_URL")
+    if frontend_url:
+        allowed_origins.append(frontend_url)
+
+    return allowed_origins
 
 
 def create_app():
@@ -32,8 +32,13 @@ def create_app():
     bcrypt.init_app(app)
     cors.init_app(
         app,
-        resources={r"/api/*": {"origins": _cors_origins(app)}},
-        allow_headers=["Content-Type", "Authorization"],
+        resources={
+            r"/api/*": {
+                "origins": _cors_origins(app),
+                "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+            }
+        },
     )
 
     from app.models.appointment import Appointment
